@@ -15,6 +15,20 @@
       "when": 1786649601625,
       "tag": "0001_extensions_and_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786650710959,
+      "tag": "0002_narrow_hammerhead",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786650722932,
+      "tag": "0003_cookbook_search_triggers",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,11 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-013 — Fáze 1 a design odsouhlaseny; tabulky potravin vznikají už ve Fázi 2 (2026-08-13)
+
+**Co:** Vojta schválil Fázi 1, design i sync návrh. Tabulky `foods`, `food_categories` (+closure), `food_units`, `store_sections` se zakládají už v migraci Fáze 2, protože `recipe_ingredients.food_id` a `food_categories.store_section_id` na ně mají FK. Plnění dat a UI potravin zůstává ve Fázi 3, sekce obchodu ve Fázi 5.
+**Proč:** Čisté FK od začátku; pozdější přidávání FK na existující data je zbytečné riziko.
+
 ## D-012 — `output: 'standalone'` jen v Docker buildu (2026-08-13)
 
 **Co:** Next.js standalone výstup se zapíná proměnnou `BUILD_STANDALONE=1` (nastaví ji Dockerfile ve Fázi 11); lokální build na Windows běží bez něj.
