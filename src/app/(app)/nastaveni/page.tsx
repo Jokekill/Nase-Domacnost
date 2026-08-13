@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api/client";
@@ -130,6 +131,16 @@ export default function SettingsPage() {
       <section className={sectionClass}>
         <h2 className="mb-2 text-lg font-semibold">Vzhled</h2>
         <ThemeSwitcher />
+      </section>
+
+      <section className={sectionClass}>
+        <h2 className="mb-2 text-lg font-semibold">Data</h2>
+        <Link
+          href="/nastaveni/potraviny"
+          className={`${secondaryButtonClass} inline-flex items-center`}
+        >
+          🥕 Potraviny a nutriční hodnoty
+        </Link>
       </section>
 
       {me && (

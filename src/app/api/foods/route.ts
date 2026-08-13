@@ -1,17 +1,17 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { uuidv7 } from "uuidv7";
 import { db } from "@/db/client";
-import { foods } from "@/db/schema";
+import { foodUnits, foods } from "@/db/schema";
 import { apiHandler } from "@/lib/api/errors";
 import { requireHousehold } from "@/lib/auth/guards";
+import { foodUpsertSchema } from "@/lib/schemas/foods";
 
-// Minimal Phase-2 surface: search + quick create from the recipe editor.
-// Nutrition fields, units and OFF integration land in Phase 3.
-const createFoodSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().trim().min(1).max(200),
-  foodCategoryId: z.string().uuid().nullish(),
+// Quick create from the recipe editor keeps only name + group; the full
+// nutrition form lives in Nastavení → Potraviny (foodUpsertSchema).
+const createFoodSchema = foodUpsertSchema.partial().required({
+  id: true,
+  name: true,
 });
 
 export const GET = apiHandler(async (req: NextRequest) => {
@@ -60,16 +60,32 @@ export const GET = apiHandler(async (req: NextRequest) => {
 export const POST = apiHandler(async (req: NextRequest) => {
   const ctx = await requireHousehold();
   const input = createFoodSchema.parse(await req.json());
-  await db
-    .insert(foods)
-    .values({
-      id: input.id,
-      householdId: ctx.householdId,
-      name: input.name,
-      foodCategoryId: input.foodCategoryId ?? null,
-      source: "manual",
-      lastModifiedBy: ctx.user.id,
-    })
-    .onConflictDoNothing();
+  const { units = [], ...fields } = input;
+
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(foods)
+      .values({
+        ...fields,
+        id: input.id,
+        name: input.name,
+        householdId: ctx.householdId,
+        source: fields.source ?? "manual",
+        lastModifiedBy: ctx.user.id,
+      })
+      .onConflictDoNothing();
+    if (units.length) {
+      await tx.insert(foodUnits).values(
+        units.map((u) => ({
+          id: u.id ?? uuidv7(),
+          householdId: ctx.householdId,
+          foodId: input.id,
+          unit: u.unit,
+          gramsPerUnit: u.gramsPerUnit,
+          lastModifiedBy: ctx.user.id,
+        })),
+      );
+    }
+  });
   return NextResponse.json({ id: input.id }, { status: 201 });
 });
