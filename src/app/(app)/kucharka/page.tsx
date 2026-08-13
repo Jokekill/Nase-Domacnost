@@ -4,6 +4,11 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
+import {
+  EMPTY_FILTERS,
+  FilterPanel,
+  type RecipeFilters,
+} from "@/components/recipes/filter-panel";
 import { RecipeCard } from "@/components/recipes/recipe-card";
 import { apiFetch } from "@/lib/api/client";
 import type { RecipeListResponse } from "@/lib/recipes/types";
@@ -19,14 +24,24 @@ function useDebounced<T>(value: T, ms: number): T {
 
 export default function CookbookPage() {
   const [q, setQ] = useState("");
+  const [filters, setFilters] = useState<RecipeFilters>(EMPTY_FILTERS);
   const query = useDebounced(q, 300);
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
-      queryKey: ["recipes", query],
+      queryKey: ["recipes", query, filters],
       queryFn: ({ pageParam }) => {
         const params = new URLSearchParams();
         if (query) params.set("q", query);
+        if (filters.categoryId) params.set("categoryId", filters.categoryId);
+        for (const tagId of filters.tagIds) params.append("tagId", tagId);
+        if (filters.difficulty) params.set("difficulty", filters.difficulty);
+        if (filters.maxTotalTime)
+          params.set("maxTotalTime", String(filters.maxTotalTime));
+        if (filters.includeFoodCategoryId)
+          params.set("includeFoodCategoryId", filters.includeFoodCategoryId);
+        if (filters.excludeFoodCategoryId)
+          params.set("excludeFoodCategoryId", filters.excludeFoodCategoryId);
         if (pageParam) params.set("cursor", pageParam);
         return apiFetch<RecipeListResponse>(`/api/recipes?${params}`);
       },
@@ -53,8 +68,10 @@ export default function CookbookPage() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Hledat recept… (bez diakritiky, toleruje překlepy)"
-        className="mb-4 w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
+        className="mb-3 w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
       />
+
+      <FilterPanel filters={filters} onChange={setFilters} />
 
       {isLoading ? (
         <p className="py-16 text-center text-muted-foreground">Načítám…</p>

@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
-**Poslední aktualizace:** 2026-08-13 (noc)
-**Aktuální fáze:** Fáze 1 — Základ (HOTOVÁ, akceptace ověřena v prohlížeči)
-**Právě rozpracováno:** nic — čeká se na odsouhlasení Fáze 1 Vojtou
-**Další krok:** Fáze 2 — 2.1 Schéma kuchařky (recipes, ingredience, kroky, kategorie, tagy)
+**Poslední aktualizace:** 2026-08-13 (pozdě v noci)
+**Aktuální fáze:** Fáze 2 — Kuchařka (hotová až na 2.9 přepočet porcí)
+**Právě rozpracováno:** 2.9 přepočet porcí — návrh zaokrouhlování poslán Vojtovi ke schválení (zadání §6/§13 vyžaduje souhlas před implementací)
+**Další krok:** po schválení implementovat 2.9 (lib + testy + UI na detailu receptu), pak akceptace 2.13 a Fáze 3
 
 ## Jak projekt spustit
 
@@ -64,19 +64,19 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Fáze 2 — Kuchařka (nejdůležitější fáze)
 
-- [ ] 2.1 Schéma a migrace: recipes, recipe_photos, recipe_steps, recipe_ingredients, recipe_ingredient_groups, categories (hierarchie), recipe_categories, tags, recipe_tags, recipe_prep_ahead
-- [ ] 2.2 CRUD receptů — API + validace Zodem
-- [ ] 2.3 Upload fotografií, sharp varianty (thumb/card/full, WebP), autentizovaný servírovací endpoint, EXIF orientace
-- [ ] 2.4 Editor receptu: základní údaje, strukturované ingredience se skupinami, postup po krocích
-- [ ] 2.5 Hierarchické kategorie — správa stromu, přiřazování receptů
-- [ ] 2.6 Tagy
-- [ ] 2.7 Přehled kuchařky — karty s fotkou, mřížka desktop / 1–2 sloupce mobil
-- [ ] 2.8 Detail receptu
-- [ ] 2.9 Přepočet porcí s „lidským" zaokrouhlováním (+ testy)
-- [ ] 2.10 Režim vaření (velké písmo, krok za krokem, Wake Lock)
-- [ ] 2.11 Vyhledávání: fulltext bez diakritiky + pg_trgm fuzzy, search_normalized sloupce + GIN indexy
-- [ ] 2.12 Filtry: kategorie, tagy, čas, obtížnost, ingredience (obsahuje/neobsahuje), skupiny ingrediencí; UI s čipy + mobilní sheet
-- [ ] 2.13 Akceptace Fáze 2: reálný recept s fotkami, nalezení bez diakritiky, podle ingredience i skupiny, přepočet porcí
+- [x] 2.1 Schéma a migrace (0002+0003): kuchařka kompletní + foods/food_categories/food_units/store_sections dopředu kvůli FK (D-013); search_tsv, GIN indexy, triggery — hotovo 2026-08-13
+- [x] 2.2 CRUD receptů — agregát (skupiny, ingredience, kroky, kategorie, tagy, prep_ahead), Zod, idempotentní POST — hotovo 2026-08-13
+- [x] 2.3 Fotky: sharp thumb/card/full WebP + originál, EXIF orientace, /api/files s oprávněním (ověřeno testem: varianty 200, anonym 401) — hotovo 2026-08-13
+- [x] 2.4 Editor receptu vč. food pickeru (hledání/vytvoření potraviny, skupina kvůli hledání) — hotovo 2026-08-13
+- [x] 2.5 Kategorie: strom + closure (create/move/delete s ochranou cyklů), API — hotovo 2026-08-13 (UI správy stromu zatím jen ploché — plná správa v Nastavení přijde s Fází 3 u food_categories)
+- [x] 2.6 Tagy (vytvoření přímo v editoru) — hotovo 2026-08-13
+- [x] 2.7 Přehled karet s fotkou + „Načíst další" stránkování — hotovo 2026-08-13
+- [x] 2.8 Detail receptu (fotky, skupiny ingrediencí, kroky, prep-ahead banner) — hotovo 2026-08-13
+- [ ] 2.9 Přepočet porcí — NÁVRH ČEKÁ NA SCHVÁLENÍ (zadání §6.2 + §13), pak implementace s testy
+- [x] 2.10 Režim vaření: krok na obrazovku, ingredience jako krok 0, Wake Lock s re-acquire — hotovo 2026-08-13
+- [x] 2.11 Vyhledávání: bez diakritiky, word_similarity (skloňování: „cocka" najde „čočky"), tsvector, hledá i v ingrediencích — ověřeno 2026-08-13
+- [x] 2.12 Filtry: kategorie (vč. podstromu), tagy, čas, obtížnost, skupina potravin obsahuje/neobsahuje; čipy aktivních filtrů — hotovo 2026-08-13 (mobilní bottom-sheet varianta odložena, panel je responzivní)
+- [ ] 2.13 Akceptace Fáze 2 — zbývá přepočet porcí (2.9); hledání dle názvu/ingredience/skupiny ověřeno API testy, recept s fotkou vytvořen přes UI
 
 ## Fáze 3 — Nutriční systém
 

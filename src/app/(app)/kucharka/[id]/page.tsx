@@ -95,6 +95,12 @@ export default function RecipeDetailPage() {
         </div>
         <div className="flex gap-2">
           <Link
+            href={`/kucharka/${id}/vareni`}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 min-h-11 inline-flex items-center"
+          >
+            🍳 Vařit
+          </Link>
+          <Link
             href={`/kucharka/${id}/upravit`}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11 inline-flex items-center"
           >

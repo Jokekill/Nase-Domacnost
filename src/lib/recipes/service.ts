@@ -135,11 +135,13 @@ export async function listRecipes(actor: Actor, query: RecipeListQuery) {
       visibility: recipes.visibility,
       ownerId: recipes.ownerId,
       createdAt: recipes.createdAt,
+      // NB: keep "recipes"."id" fully qualified — an interpolated column in a
+      // select-field subquery renders unqualified and would bind to rp.id.
       mainPhotoKey: sql<string | null>`(
         SELECT rp.storage_key FROM recipe_photos rp
-        WHERE rp.recipe_id = ${recipes.id} AND rp.deleted_at IS NULL
+        WHERE rp.recipe_id = "recipes"."id" AND rp.deleted_at IS NULL
         ORDER BY rp.is_main DESC, rp.sort_order ASC LIMIT 1
-      )`,
+      )`.as("main_photo_key"),
     })
     .from(recipes)
     .where(and(...conditions))
