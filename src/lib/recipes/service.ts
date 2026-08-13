@@ -39,11 +39,23 @@ export async function listRecipes(actor: Actor, query: RecipeListQuery) {
   ];
 
   if (query.q) {
-    // Diacritics-insensitive substring OR fuzzy (trgm) OR full-text match.
+    // Diacritics-insensitive substring, word-level fuzzy match (handles typos
+    // AND Czech inflection: "cocka" ~ "cocky"), full-text, or a matching
+    // linked ingredient name.
     conditions.push(sql`(
       ${recipes.searchNormalized} LIKE '%' || immutable_unaccent(lower(${query.q})) || '%'
-      OR ${recipes.searchNormalized} % immutable_unaccent(lower(${query.q}))
+      OR word_similarity(immutable_unaccent(lower(${query.q})), ${recipes.searchNormalized}) > 0.4
       OR search_tsv @@ plainto_tsquery('simple', immutable_unaccent(lower(${query.q})))
+      OR EXISTS (
+        SELECT 1 FROM recipe_ingredients ri
+        LEFT JOIN foods f ON f.id = ri.food_id
+        WHERE ri.recipe_id = ${recipes.id} AND ri.deleted_at IS NULL
+          AND (
+            f.search_normalized LIKE '%' || immutable_unaccent(lower(${query.q})) || '%'
+            OR word_similarity(immutable_unaccent(lower(${query.q})), f.search_normalized) > 0.4
+            OR immutable_unaccent(lower(coalesce(ri.free_text, ''))) LIKE '%' || immutable_unaccent(lower(${query.q})) || '%'
+          )
+      )
     )`);
   }
   if (query.categoryId) {
