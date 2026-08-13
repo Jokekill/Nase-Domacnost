@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: domacnost
+      POSTGRES_USER: domacnost
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-domacnost_dev}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U domacnost -d domacnost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # app service is added in Phase 11 (multi-arch image build for Raspberry Pi);
+  # during development the app runs via `pnpm dev` against this db.
+
+volumes:
+  db_data:
