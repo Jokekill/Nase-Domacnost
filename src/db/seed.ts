@@ -3,6 +3,8 @@ import { hash } from "@node-rs/argon2";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { uuidv7 } from "uuidv7";
+import type { db } from "./client";
+import { seedHouseholdCatalogue } from "./seed-catalogue";
 import * as schema from "./schema";
 
 /**
@@ -58,6 +60,10 @@ async function main() {
       { householdId, userId: vojtaId, role: "admin" },
       { householdId, userId: eliskaId, role: "member" },
     ]);
+    const counts = await seedHouseholdCatalogue(tx, householdId, vojtaId);
+    console.log(
+      `Catalogue: ${counts.foods} foods, ${counts.foodCategories} food categories, ${counts.recipeCategories} recipe categories.`,
+    );
   });
 
   console.log("Seeded test household with users vojta@test.local and eliska@test.local.");

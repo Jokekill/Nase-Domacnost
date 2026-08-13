@@ -12,6 +12,7 @@ import { ApiError, apiHandler } from "@/lib/api/errors";
 import { hashPassword } from "@/lib/auth/passwords";
 import { createSession } from "@/lib/auth/session";
 import { hashToken } from "@/lib/auth/tokens";
+import { seedHouseholdCatalogue } from "@/db/seed-catalogue";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { registerSchema } from "@/lib/schemas/auth";
 
@@ -55,6 +56,8 @@ export const POST = apiHandler(async (req: NextRequest) => {
         userId,
         role: "admin",
       });
+      // A new household starts with the food and recipe category catalogue.
+      await seedHouseholdCatalogue(tx, householdId, userId);
     });
   } else {
     if (!input.inviteToken) {
