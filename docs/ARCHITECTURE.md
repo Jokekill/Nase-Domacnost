@@ -67,7 +67,7 @@ filtrovány `user_id = session.user` (ani admin nevidí cizí deník).
 | visibility / vztah | vlastník | člen domácnosti vlastníka | uživatel v `recipe_shares` | držitel public tokenu |
 |---|---|---|---|---|
 | `private`   | view+edit | — | — | — |
-| `household` | view+edit | view + kopie (edit jen vlastník) | — | — |
+| `household` | view+edit | view+edit+kopie (mazání jen vlastník/admin) | — | — |
 | `shared`    | view+edit | dle `household`* | dle `permission` (view/edit) | — |
 | public link (flag) | view+edit | * | * | view (jen recept, bez fotek v plné kvalitě? → ne, fotky ano; bez jakýchkoli dat domácnosti) |
 
