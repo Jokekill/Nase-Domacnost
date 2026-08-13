@@ -55,12 +55,20 @@ export default function CookbookPage() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-semibold">Kuchařka</h1>
-        <Link
-          href="/kucharka/novy"
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 min-h-11 inline-flex items-center"
-        >
-          + Přidat recept
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/kucharka/import"
+            className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
+          >
+            ⬆︎ Import
+          </Link>
+          <Link
+            href="/kucharka/novy"
+            className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 min-h-11"
+          >
+            + Přidat recept
+          </Link>
+        </div>
       </div>
 
       <input

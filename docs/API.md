@@ -92,9 +92,10 @@ Stejné rozhraní má `/api/food-categories` (Fáze 3).
 | GET  | `/api/foods?q=&categoryId=` | vyhledávání potravin |
 | POST/PATCH/DELETE | `/api/foods[/:id]` | správa potravin |
 | POST/PATCH/DELETE | `/api/foods/:id/units[/:unitId]` | vlastní jednotky |
-| GET  | `/api/off/search?q=` | proxy na Open Food Facts (cache, rate limit, User-Agent) |
-| GET  | `/api/off/barcode/:code` | dohledání podle čárového kódu |
-| POST | `/api/recipes/import` | import receptů z JSON (docs/IMPORT-RECIPES.md), režim náhled/potvrzení |
+| GET/PATCH/DELETE | `/api/foods/:id` | detail, úprava (vč. jednotek), soft delete (blokován, pokud potravinu používají recepty) |
+| GET  | `/api/off/search?q=` | hledání v Open Food Facts — vrací **jen identifikaci** (kód, název, značka, množství) |
+| GET  | `/api/off/barcode/:code` | plný produkt s nutričními hodnotami + seznam `missing` |
+| POST | `/api/recipes/import` | import receptů z JSON (docs/IMPORT-RECIPES.md), `mode: "preview" \| "commit"` |
 
 ## Jídelníček a kalendář (Fáze 4)
 

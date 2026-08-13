@@ -4,6 +4,18 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-017 — Import receptů: párování bez diakritiky + náhled před uložením (2026-08-13)
+
+**Co:** Formát v docs/IMPORT-RECIPES.md (`formatVersion: 1`, JSON, včetně hotového promptu pro AI). Import je dvoufázový: náhled (kolik receptů, kolik ingrediencí se spárovalo, co ne, jaké kategorie/tagy vzniknou) → potvrzení. Párování potravin: přesná shoda normalizovaného názvu, jinak trigram `similarity > 0.55`; pod prahem zůstane volný text. Kategorie a tagy se hledají podle názvu, nenalezené vzniknou. BOM se před parsováním odstraňuje (Windows editory).
+**Proč:** Vojta převede PDF recepty přes AI; formát musí být strojově spolehlivý a import nesmí nic tiše rozbít.
+**Alternativy:** Přímý import PDF (nespolehlivé), automatické zakládání potravin z nespárovaných názvů (zavlekly by se nesmysly bez nutričních hodnot).
+
+## D-016 — Open Food Facts: dvoukrokové vyhledávání (2026-08-13)
+
+**Co:** Vyhledávání jde na `search.openfoodfacts.org` (starý `/cgi/search.pl` vrací 503) a vrací jen identifikaci; nutriční hodnoty se načtou až po výběru přes `world.openfoodfacts.org/api/v2/product/<kód>`. HTTP 404 = „produkt neexistuje", ne výpadek. Vlastní User-Agent, cache 30 dní v `off_cache`, globální i uživatelský rate limit.
+**Proč:** Vyhledávací služba nutriční hodnoty nevrací; dvoukrok navíc odpovídá zadání „nalezenou položku uživatel potvrdí" a šetří zátěž OFF.
+**Alternativy:** Načítat detaily všech výsledků najednou (12 requestů na jedno hledání — zbytečná zátěž).
+
 ## D-015 — Nutriční výpočty: převody, součty, reverzní výpočet (2026-08-13)
 
 **Co:** Tři čisté knihovny v `src/lib/domain/`, schváleno Vojtou předem.

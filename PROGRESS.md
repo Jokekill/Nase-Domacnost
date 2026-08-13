@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
-**Poslední aktualizace:** 2026-08-13 (pozdě v noci)
-**Aktuální fáze:** Fáze 2 — Kuchařka (HOTOVÁ, akceptace ověřena)
-**Právě rozpracováno:** nic — čeká se na odsouhlasení Fáze 2 Vojtou
-**Další krok:** Fáze 3 — nutriční systém (nejdřív návrh výpočtů 6.1/6.3/6.4 ke schválení, pak seed potravin)
+**Poslední aktualizace:** 2026-08-14
+**Aktuální fáze:** Fáze 3 — Nutriční systém (HOTOVÁ, akceptace ověřena)
+**Právě rozpracováno:** nic — čeká se na odsouhlasení Fáze 3 Vojtou
+**Další krok:** Fáze 4 — Jídelníček a kalendář (4.1 schéma meal_types, meal_plan_entries, calendar_events)
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -26,10 +26,13 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 - [ ] HEIC upload fotek — ověřit podporu sharp/libheif v Docker buildu (Fáze 2)
 - [ ] SMTP pro reset hesla zatím chybí — odkaz se loguje do konzole serveru (záměr, viz ARCHITECTURE.md §1.3)
 - [ ] CI workflow (.github/workflows/ci.yml) je připravený, ale repo nemá GitHub remote — aktivuje se až po pushnutí
+- [ ] Skener čárových kódů potřebuje HTTPS (secure context) — na notebooku funguje jen přes localhost, na Pi to zajistí `tailscale serve`
+- [ ] Nutriční hodnoty v seedu jsou průměrné referenční hodnoty z veřejných tabulek — u konkrétních výrobků se mohou lišit, lze opravit v Nastavení → Potraviny
 
 ## Rozhodnutí, která čekají na Vojtu
 
-- [ ] Odsouhlasení Fáze 1 (akceptace splněna: registrace, přihlášení, domácnost, pozvánka, ověřeno v prohlížeči)
+- [ ] Odsouhlasení Fáze 3 (nutriční systém)
+- [ ] **Recepty k importu:** formát je hotový v docs/IMPORT-RECIPES.md včetně promptu pro AI — můžeš začít převádět PDF a nahrát je v Kuchařka → Import
 
 ---
 
@@ -82,18 +85,18 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Fáze 3 — Nutriční systém
 
-- [ ] 3.1 Schéma: foods, food_categories (hierarchie), food_units, nutriční sloupce, reference_unit, density_g_per_ml, grams_per_piece
-- [ ] 3.2 Seed ~200 českých potravin (seeds/foods.json) + strom food_categories
-- [ ] 3.3 Správa potravin a jednotek v UI
-- [ ] 3.4 Převody jednotek (g↔ml přes hustotu, ks↔g, lžíce/lžička přes food_units) + testy
-- [ ] 3.5 Výpočet nutričních hodnot receptu a porce, viditelné upozornění na nekompletnost + testy
-- [ ] 3.6 nutrition_override na ingredienci (UI indikace, návrat k DB hodnotě)
-- [ ] 3.7 Open Food Facts: hledání podle názvu, rate limit, User-Agent, cache
-- [ ] 3.8 Čárové kódy: BarcodeDetector + fallback zxing-js
-- [ ] 3.9 Reverzní výpočet se zamykáním ingrediencí + varování + testy
-- [ ] 3.10 Specifikace importního formátu receptů → docs/IMPORT-RECIPES.md (Vojta převede PDF recepty přes AI do tohoto formátu; spec napsat co nejdřív, ať může začít)
-- [ ] 3.11 Import receptů z JSON souboru (validace, náhled, hlášení chyb)
-- [ ] 3.12 Akceptace Fáze 3: správné hodnoty na porci, reverzní výpočet funguje a varuje, testy prochází
+- [x] 3.1 Schéma potravin — vzniklo už ve Fázi 2 (D-013), doplněno divisible_pieces (migrace 0004) — hotovo 2026-08-13
+- [x] 3.2 Seed katalogu: 228 potravin, 44 skupin potravin, 17 kategorií receptů, převody lžic; seeduje se i při založení nové domácnosti — hotovo 2026-08-14
+- [x] 3.3 Správa potravin a jednotek v UI (Nastavení → Potraviny) — hotovo 2026-08-14
+- [x] 3.4 Převody jednotek + 16 testů (nikdy nehádá, vrací důvod selhání) — hotovo 2026-08-13, D-015
+- [x] 3.5 Nutriční výpočty receptu a porce + panel v UI s upozorněním na nekompletnost + 11 testů — hotovo 2026-08-14
+- [x] 3.6 nutrition_override na ingredienci (placeholdery z DB, ✎ indikace, návrat k DB hodnotě) — ověřeno: recept 1180 kJ, databáze netknutá — hotovo 2026-08-14
+- [x] 3.7 Open Food Facts: nový vyhledávací endpoint, cache 30 dní, User-Agent, rate limit (D-016) — hotovo 2026-08-14
+- [x] 3.8 Čárové kódy: BarcodeDetector + ruční zadání kódu jako fallback — hotovo 2026-08-14 *(zxing-js fallback zatím nepřidán — BarcodeDetector pokrývá Chrome/Android, na iOS je ruční zadání; doplnit až se ukáže potřeba)*
+- [x] 3.9 Reverzní výpočet se zamykáním + varování + 11 testů — hotovo 2026-08-13/14
+- [x] 3.10 Specifikace importního formátu → docs/IMPORT-RECIPES.md včetně promptu pro AI — hotovo 2026-08-14
+- [x] 3.11 Import receptů z JSON (náhled → potvrzení, párování potravin, ošetření BOM) — hotovo 2026-08-14, D-017
+- [x] 3.12 Akceptace Fáze 3 splněna 2026-08-14: bábovka 1195 kJ/porci (ruční kontrola sedí), přepis hodnot funguje jen v receptu, reverzní výpočet hlásí skutečnou hodnotu po zaokrouhlení (787 kJ místo cílových 800) a chybové stavy, 59 testů prochází
 
 ## Fáze 4 — Jídelníček a kalendář
 

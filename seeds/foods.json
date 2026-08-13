@@ -276,7 +276,7 @@
     { "name": "Koriandr mletý", "category": "koreni", "energyKj": 1250, "proteinG": 12, "carbsG": 55, "sugarsG": 0, "fiberG": 42, "fatG": 17, "satFatG": 1, "saltG": 0.09, "units": [{ "unit": "lzicka", "gramsPerUnit": 2 }] },
     { "name": "Kari koření", "category": "koreni", "energyKj": 1400, "proteinG": 14, "carbsG": 58, "sugarsG": 3, "fiberG": 33, "fatG": 14, "satFatG": 2, "saltG": 0.1, "units": [{ "unit": "lzicka", "gramsPerUnit": 2.5 }] },
     { "name": "Muškátový oříšek", "category": "koreni", "energyKj": 2200, "proteinG": 6, "carbsG": 49, "sugarsG": 28, "fiberG": 21, "fatG": 36, "satFatG": 26, "saltG": 0.04 },
-    { "name": "Nové koření", "category": "koreni", "energyKj": 1200, "proteinG": 6, "carbsG": 72, "sugarsG": 0, "fiberG": 22, "fatG": 9, "satFatG": 2.5, "saltG": 0.2 },
+    { "name": "Nové koření", "category": "koreni", "energyKj": 1200, "proteinG": 6, "carbsG": 72, "sugarsG": 0, "fiberG": 22, "fatG": 9, "satFatG": 2.5, "saltG": 0.2, "gramsPerPiece": 0.1, "units": [{ "unit": "lzicka", "gramsPerUnit": 2 }] },
     { "name": "Česnek granulovaný", "category": "koreni", "energyKj": 1500, "proteinG": 17, "carbsG": 73, "sugarsG": 2, "fiberG": 9, "fatG": 0.7, "satFatG": 0.2, "saltG": 0.05, "units": [{ "unit": "lzicka", "gramsPerUnit": 3 }] },
     { "name": "Zeleninový bujon (kostka)", "category": "koreni", "energyKj": 900, "proteinG": 8, "carbsG": 20, "sugarsG": 8, "fiberG": 1, "fatG": 10, "satFatG": 5, "saltG": 55, "gramsPerPiece": 10 },
     { "name": "Cukr krupice", "category": "cukr", "energyKj": 1700, "proteinG": 0, "carbsG": 100, "sugarsG": 100, "fiberG": 0, "fatG": 0, "satFatG": 0, "saltG": 0, "densityGPerMl": 0.85, "units": [{ "unit": "lzice", "gramsPerUnit": 15 }, { "unit": "lzicka", "gramsPerUnit": 5 }] },
