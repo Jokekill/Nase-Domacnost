@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -99,6 +100,9 @@ export const foods = pgTable(
       scale: 2,
       mode: "number",
     }),
+    // Whether half pieces make sense when scaling servings (eggs, onions: yes;
+    // a can of tomatoes: no). Zadání §6.2.
+    divisiblePieces: boolean("divisible_pieces").notNull().default(false),
     source: text("source", { enum: ["seed", "manual", "openfoodfacts"] })
       .notNull()
       .default("manual"),

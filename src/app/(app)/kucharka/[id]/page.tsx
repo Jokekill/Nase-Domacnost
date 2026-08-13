@@ -3,8 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 import { apiFetch } from "@/lib/api/client";
 import type { RecipeAggregate } from "@/components/recipes/recipe-form";
+import { formatScaled, scaleIngredient } from "@/lib/domain/servings";
 import {
   DIFFICULTY_LABELS,
   UNIT_LABELS,
@@ -19,28 +21,21 @@ type Photo = {
   isMain: boolean;
   sortOrder: number;
 };
-type Detail = RecipeAggregate & {
+type DetailIngredient = RecipeAggregate["ingredients"][number] & {
+  divisiblePieces: boolean;
+  isSpice: boolean;
+};
+type Detail = Omit<RecipeAggregate, "ingredients"> & {
+  ingredients: DetailIngredient[];
   photos: Photo[];
   totalTimeMin: number | null;
 };
-
-function formatAmount(amount: number | null, unit: string | null): string {
-  const parts: string[] = [];
-  if (amount != null) {
-    parts.push(
-      Number.isInteger(amount)
-        ? String(amount)
-        : String(amount).replace(".", ","),
-    );
-  }
-  if (unit) parts.push(UNIT_LABELS[unit as Unit] ?? unit);
-  return parts.join(" ");
-}
 
 export default function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [servings, setServings] = useState<number | null>(null);
 
   const { data: recipe, isLoading } = useQuery({
     queryKey: ["recipe", id],
@@ -77,6 +72,19 @@ export default function RecipeDetailPage() {
   ]
     .filter(Boolean)
     .join(" · ");
+
+  const currentServings = servings ?? recipe.baseServings;
+  const isScaled = currentServings !== recipe.baseServings;
+  const scalingWarnings = recipe.ingredients.flatMap((i) => {
+    const scaled = scaleIngredient(i, currentServings, recipe.baseServings);
+    if (!scaled.warning || scaled.exact == null || scaled.rounded == null)
+      return [];
+    const name = i.foodName ?? i.freeText ?? "";
+    const unit = i.unit ? (UNIT_LABELS[i.unit as Unit] ?? i.unit) : "";
+    return [
+      `${name}: ${formatScaled(scaled.exact)} ${unit} → ${formatScaled(scaled.rounded)} ${unit}`.trim(),
+    ];
+  });
 
   const ungrouped = recipe.ingredients.filter((i) => !i.groupId);
   const groupsWithItems = recipe.groups
@@ -153,13 +161,44 @@ export default function RecipeDetailPage() {
       <div className="grid gap-6 md:grid-cols-[280px_1fr]">
         <section>
           <h2 className="mb-2 text-xl font-semibold">Ingredience</h2>
-          <p className="mb-2 text-sm text-muted-foreground">
-            na {recipe.baseServings} porcí
-          </p>
+          <div className="mb-3 flex items-center gap-2">
+            <button
+              onClick={() =>
+                setServings(Math.max(1, currentServings - 1))
+              }
+              className="h-9 w-9 rounded-lg border border-border text-lg hover:bg-surface-warm"
+              aria-label="Méně porcí"
+            >
+              −
+            </button>
+            <span className="min-w-20 text-center text-sm font-medium">
+              {currentServings} porcí
+            </span>
+            <button
+              onClick={() => setServings(currentServings + 1)}
+              className="h-9 w-9 rounded-lg border border-border text-lg hover:bg-surface-warm"
+              aria-label="Více porcí"
+            >
+              +
+            </button>
+            {isScaled && (
+              <button
+                onClick={() => setServings(null)}
+                className="text-sm text-primary hover:underline"
+              >
+                původní ({recipe.baseServings})
+              </button>
+            )}
+          </div>
           {ungrouped.length > 0 && (
             <ul className="space-y-1.5">
               {ungrouped.map((i) => (
-                <IngredientLine key={i.id} ingredient={i} />
+                <IngredientLine
+                  key={i.id}
+                  ingredient={i}
+                  servings={currentServings}
+                  baseServings={recipe.baseServings}
+                />
               ))}
             </ul>
           )}
@@ -168,11 +207,22 @@ export default function RecipeDetailPage() {
               <h3 className="mb-1 font-medium">{g.name}</h3>
               <ul className="space-y-1.5">
                 {g.items.map((i) => (
-                  <IngredientLine key={i.id} ingredient={i} />
+                  <IngredientLine
+                    key={i.id}
+                    ingredient={i}
+                    servings={currentServings}
+                    baseServings={recipe.baseServings}
+                  />
                 ))}
               </ul>
             </div>
           ))}
+          {scalingWarnings.length > 0 && (
+            <p className="mt-3 rounded-lg bg-surface-warm p-2.5 text-xs leading-relaxed">
+              ⚠️ Přepočet vyžaduje zaokrouhlení:{" "}
+              {scalingWarnings.join("; ")}. Zvaž úpravu.
+            </p>
+          )}
         </section>
 
         <section>
@@ -207,11 +257,25 @@ export default function RecipeDetailPage() {
 
 function IngredientLine({
   ingredient,
+  servings,
+  baseServings,
 }: {
-  ingredient: Detail["ingredients"][number];
+  ingredient: DetailIngredient;
+  servings: number;
+  baseServings: number;
 }) {
   const name = ingredient.foodName ?? ingredient.freeText ?? "";
-  const amount = formatAmount(ingredient.amount, ingredient.unit);
+  const scaled = scaleIngredient(ingredient, servings, baseServings);
+  const unitLabel = ingredient.unit
+    ? (UNIT_LABELS[ingredient.unit as Unit] ?? ingredient.unit)
+    : "";
+  const amountText = [formatScaled(scaled.rounded), unitLabel]
+    .filter(Boolean)
+    .join(" ");
+  const exactTitle =
+    scaled.warning && scaled.exact != null
+      ? `přesně ${formatScaled(scaled.exact)} ${unitLabel}`
+      : undefined;
   return (
     <li className="flex items-baseline justify-between gap-2 border-b border-border/60 pb-1 text-sm">
       <span>
@@ -223,7 +287,10 @@ function IngredientLine({
           <span className="text-muted-foreground"> — volitelně</span>
         )}
       </span>
-      <span className="shrink-0 font-medium">{amount}</span>
+      <span className="shrink-0 font-medium" title={exactTitle}>
+        {scaled.warning && "⚠️ "}
+        {amountText}
+      </span>
     </li>
   );
 }

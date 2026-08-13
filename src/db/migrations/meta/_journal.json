@@ -29,6 +29,13 @@
       "when": 1786650722932,
       "tag": "0003_cookbook_search_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786652288315,
+      "tag": "0004_naive_gauntlet",
+      "breakpoints": true
     }
   ]
 }

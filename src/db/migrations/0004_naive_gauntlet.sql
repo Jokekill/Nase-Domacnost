@@ -1,0 +1,1 @@
+ALTER TABLE "foods" ADD COLUMN "divisible_pieces" boolean DEFAULT false NOT NULL;

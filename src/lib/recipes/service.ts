@@ -184,6 +184,15 @@ export async function getRecipeAggregate(recipeId: string) {
         .select({
           ingredient: recipeIngredients,
           foodName: foods.name,
+          divisiblePieces: foods.divisiblePieces,
+          // Food sits anywhere under the "Koření" group (fully qualified —
+          // see mainPhotoKey note above).
+          isSpice: sql<boolean>`EXISTS (
+            SELECT 1 FROM food_category_closure fcc
+            JOIN food_categories fc ON fc.id = fcc.ancestor_id
+            WHERE fcc.descendant_id = "foods"."food_category_id"
+              AND fc.search_normalized = 'koreni'
+          )`.as("is_spice"),
         })
         .from(recipeIngredients)
         .leftJoin(foods, eq(foods.id, recipeIngredients.foodId))
@@ -249,6 +258,8 @@ export async function getRecipeAggregate(recipeId: string) {
     ingredients: ingredients.map((row) => ({
       ...row.ingredient,
       foodName: row.foodName,
+      divisiblePieces: row.divisiblePieces ?? false,
+      isSpice: row.isSpice ?? false,
     })),
     steps: steps.map((s) => ({
       ...s,

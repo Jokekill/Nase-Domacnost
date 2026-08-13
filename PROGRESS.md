@@ -1,9 +1,11 @@
 # STAV PROJEKTU
 
 **Poslední aktualizace:** 2026-08-13 (pozdě v noci)
-**Aktuální fáze:** Fáze 2 — Kuchařka (hotová až na 2.9 přepočet porcí)
-**Právě rozpracováno:** 2.9 přepočet porcí — návrh zaokrouhlování poslán Vojtovi ke schválení (zadání §6/§13 vyžaduje souhlas před implementací)
-**Další krok:** po schválení implementovat 2.9 (lib + testy + UI na detailu receptu), pak akceptace 2.13 a Fáze 3
+**Aktuální fáze:** Fáze 2 — Kuchařka (HOTOVÁ, akceptace ověřena)
+**Právě rozpracováno:** nic — čeká se na odsouhlasení Fáze 2 Vojtou
+**Další krok:** Fáze 3 — nutriční systém (nejdřív návrh výpočtů 6.1/6.3/6.4 ke schválení, pak seed potravin)
+
+**POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
 ## Jak projekt spustit
 
@@ -72,11 +74,11 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 - [x] 2.6 Tagy (vytvoření přímo v editoru) — hotovo 2026-08-13
 - [x] 2.7 Přehled karet s fotkou + „Načíst další" stránkování — hotovo 2026-08-13
 - [x] 2.8 Detail receptu (fotky, skupiny ingrediencí, kroky, prep-ahead banner) — hotovo 2026-08-13
-- [ ] 2.9 Přepočet porcí — NÁVRH ČEKÁ NA SCHVÁLENÍ (zadání §6.2 + §13), pak implementace s testy
+- [x] 2.9 Přepočet porcí — návrh schválen (D-014), lib s 16 testy, stepper na detailu, varování při >15 % odchylce, foods.divisible_pieces (migrace 0004) — hotovo 2026-08-13, ověřeno v prohlížeči (300 g → 450 g při 4→6)
 - [x] 2.10 Režim vaření: krok na obrazovku, ingredience jako krok 0, Wake Lock s re-acquire — hotovo 2026-08-13
 - [x] 2.11 Vyhledávání: bez diakritiky, word_similarity (skloňování: „cocka" najde „čočky"), tsvector, hledá i v ingrediencích — ověřeno 2026-08-13
 - [x] 2.12 Filtry: kategorie (vč. podstromu), tagy, čas, obtížnost, skupina potravin obsahuje/neobsahuje; čipy aktivních filtrů — hotovo 2026-08-13 (mobilní bottom-sheet varianta odložena, panel je responzivní)
-- [ ] 2.13 Akceptace Fáze 2 — zbývá přepočet porcí (2.9); hledání dle názvu/ingredience/skupiny ověřeno API testy, recept s fotkou vytvořen přes UI
+- [x] 2.13 Akceptace Fáze 2 splněna 2026-08-13: recept s fotkou přes UI, nalezení bez diakritiky („dhal", „cocka"→„čočky"), podle ingredience (includeFoodId) i skupiny (Luštěniny→Čočka→Červená čočka přes closure), přepočet porcí funguje
 
 ## Fáze 3 — Nutriční systém
 

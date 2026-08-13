@@ -4,6 +4,11 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-014 — Přepočet porcí: návrh odsouhlasen a implementován (2026-08-13)
+
+**Co:** Čisté funkce v `src/lib/domain/servings.ts` (16 testů). Lineární koeficient + „lidské" zaokrouhlení dle §6.2; kg/l se zaokrouhlují přes ×1000 ekvivalent; koření = potravina ve stromu pod kategorií se `search_normalized='koreni'` nebo jednotka lžička/špetka; `foods.divisible_pieces` pro půlitelné kusy; špetka/dle chuti se nemění; kladná hodnota se nikdy nezaokrouhlí na nulu (bump na nejmenší krok). Varování při odchylce > 15 % — v UI ⚠️ u položky, souhrn pod ingrediencemi, přesná hodnota v tooltipu. Přepočet je jen pohled, data se nemění.
+**Alternativy:** Zaokrouhlení čistě matematické (odporuje zadání), práh varování 10 %/20 % (Vojta schválil 15 %).
+
 ## D-013 — Fáze 1 a design odsouhlaseny; tabulky potravin vznikají už ve Fázi 2 (2026-08-13)
 
 **Co:** Vojta schválil Fázi 1, design i sync návrh. Tabulky `foods`, `food_categories` (+closure), `food_units`, `store_sections` se zakládají už v migraci Fáze 2, protože `recipe_ingredients.food_id` a `food_categories.store_section_id` na ně mají FK. Plnění dat a UI potravin zůstává ve Fázi 3, sekce obchodu ve Fázi 5.

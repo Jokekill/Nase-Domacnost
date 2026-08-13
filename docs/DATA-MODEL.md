@@ -210,6 +210,8 @@ foods
                    numeric(10,2) NULL
   density_g_per_ml numeric(10,4) NULL        -- převod g <-> ml
   grams_per_piece  numeric(10,2) NULL        -- převod ks <-> g
+  divisible_pieces boolean NOT NULL DEFAULT false  -- půlky kusů dávají smysl
+                                             -- (vejce ano, konzerva ne) — §6.2
   source           text NOT NULL             -- 'seed' | 'manual' | 'openfoodfacts'
   off_barcode      text NULL
   search_normalized
