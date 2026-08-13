@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
+  foodUnits,
   foods,
   recipeCategories,
   recipeIngredientGroups,
@@ -183,8 +184,7 @@ export async function getRecipeAggregate(recipeId: string) {
       db
         .select({
           ingredient: recipeIngredients,
-          foodName: foods.name,
-          divisiblePieces: foods.divisiblePieces,
+          food: foods,
           // Food sits anywhere under the "Koření" group (fully qualified —
           // see mainPhotoKey note above).
           isSpice: sql<boolean>`EXISTS (
@@ -252,14 +252,53 @@ export async function getRecipeAggregate(recipeId: string) {
         .limit(1),
     ]);
 
+  // Per-food unit conversions for the foods actually used in this recipe.
+  const usedFoodIds = [
+    ...new Set(
+      ingredients
+        .map((row) => row.food?.id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const unitRows = usedFoodIds.length
+    ? await db
+        .select()
+        .from(foodUnits)
+        .where(
+          and(inArray(foodUnits.foodId, usedFoodIds), isNull(foodUnits.deletedAt)),
+        )
+    : [];
+
   return {
     ...recipe,
     groups,
     ingredients: ingredients.map((row) => ({
       ...row.ingredient,
-      foodName: row.foodName,
-      divisiblePieces: row.divisiblePieces ?? false,
+      foodName: row.food?.name ?? null,
+      divisiblePieces: row.food?.divisiblePieces ?? false,
       isSpice: row.isSpice ?? false,
+      // Everything the client needs to compute nutrition locally.
+      food: row.food
+        ? {
+            id: row.food.id,
+            name: row.food.name,
+            referenceUnit: row.food.referenceUnit,
+            energyKj: row.food.energyKj,
+            proteinG: row.food.proteinG,
+            carbsG: row.food.carbsG,
+            sugarsG: row.food.sugarsG,
+            fiberG: row.food.fiberG,
+            fatG: row.food.fatG,
+            satFatG: row.food.satFatG,
+            saltG: row.food.saltG,
+            densityGPerMl: row.food.densityGPerMl,
+            gramsPerPiece: row.food.gramsPerPiece,
+            divisiblePieces: row.food.divisiblePieces,
+            units: unitRows
+              .filter((u) => u.foodId === row.food!.id)
+              .map((u) => ({ unit: u.unit, gramsPerUnit: u.gramsPerUnit })),
+          }
+        : null,
     })),
     steps: steps.map((s) => ({
       ...s,

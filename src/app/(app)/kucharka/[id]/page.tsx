@@ -6,7 +6,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api/client";
 import type { RecipeAggregate } from "@/components/recipes/recipe-form";
+import type {
+  NutritionIngredient,
+  NutritionValues,
+} from "@/lib/domain/nutrition";
 import { formatScaled, scaleIngredient } from "@/lib/domain/servings";
+import { NutritionPanel } from "@/components/recipes/nutrition-panel";
 import {
   DIFFICULTY_LABELS,
   UNIT_LABELS,
@@ -24,6 +29,8 @@ type Photo = {
 type DetailIngredient = RecipeAggregate["ingredients"][number] & {
   divisiblePieces: boolean;
   isSpice: boolean;
+  food: NutritionIngredient["food"];
+  nutritionOverride?: NutritionValues | null;
 };
 type Detail = Omit<RecipeAggregate, "ingredients"> & {
   ingredients: DetailIngredient[];
@@ -244,6 +251,20 @@ export default function RecipeDetailPage() {
           </ol>
         </section>
       </div>
+
+      <NutritionPanel
+        ingredients={recipe.ingredients.map((i) => ({
+          id: i.id,
+          amount: i.amount,
+          unit: i.unit,
+          isOptional: i.isOptional,
+          nutritionOverride: i.nutritionOverride ?? null,
+          food: i.food,
+          label: i.foodName ?? i.freeText ?? "ingredience",
+        }))}
+        baseServings={recipe.baseServings}
+        servings={currentServings}
+      />
 
       {recipe.notes && (
         <section className="mt-6 rounded-card bg-surface-warm p-4">

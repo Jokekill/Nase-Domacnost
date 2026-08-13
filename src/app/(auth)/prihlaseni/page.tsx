@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   AuthCard,
   buttonClass,
@@ -17,6 +17,20 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  // Middleware cannot verify the session, so an already-signed-in visitor is
+  // sent onwards from here instead (see src/middleware.ts).
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch("/api/auth/me")
+      .then(() => {
+        if (!cancelled) router.replace(searchParams.get("next") ?? "/");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [router, searchParams]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

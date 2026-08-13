@@ -10,6 +10,11 @@ const PUBLIC_PATHS = [
 /**
  * Fast cookie-presence gate for pages. Real session validation happens
  * server-side in the (app) layout — middleware cannot query the DB.
+ *
+ * Deliberately one-directional: a *stale* cookie (valid format, no session row
+ * in the DB) must not bounce between here and the layout redirect. Sending
+ * already-authenticated users away from the login page is handled on the
+ * client, where the session can actually be verified.
  */
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -21,12 +26,6 @@ export function middleware(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = "/prihlaseni";
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
-  }
-  if (hasSession && isPublic) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/";
-    url.search = "";
     return NextResponse.redirect(url);
   }
   return NextResponse.next();
