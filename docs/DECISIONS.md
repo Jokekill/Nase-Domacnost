@@ -4,6 +4,16 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-012 — `output: 'standalone'` jen v Docker buildu (2026-08-13)
+
+**Co:** Next.js standalone výstup se zapíná proměnnou `BUILD_STANDALONE=1` (nastaví ji Dockerfile ve Fázi 11); lokální build na Windows běží bez něj.
+**Proč:** Standalone tracing vytváří symlinky do pnpm store a Windows je bez zvláštních oprávnění nepovolí (EPERM). V Linuxu (Docker) problém není.
+**Alternativy:** Zapnout Windows Developer Mode (zásah do nastavení systému, nechceme), stavět lokálně jen v Dockeru (pomalé pro vývoj).
+
+## D-011 — Sync protokol a Fáze 1 odsouhlaseny Vojtou (2026-08-13)
+
+**Co:** docs/SYNC.md schválen („OK") včetně field-level LWW, checked-wins a 90denní retence change_logu. Fonty přes balíčky @fontsource-variable (self-hosted, bez CDN).
+
 ## D-010 — Fonty: Fraunces + Inter, self-hostované (2026-08-13)
 
 **Co:** Nadpisy serif Fraunces, UI sans Inter; oba variabilní, s češtinou, licence OFL, soubory v repu. Stejné soubory pro web (`next/font/local`) i PDF (`@react-pdf/renderer`).

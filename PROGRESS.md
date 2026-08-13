@@ -1,22 +1,33 @@
 # STAV PROJEKTU
 
-**Poslední aktualizace:** 2026-08-13 (večer)
-**Aktuální fáze:** Fáze 0 — Analýza a návrh (dokončena, čeká na odsouhlasení SYNC.md)
-**Právě rozpracováno:** 0.8 Sync protokol — návrh v docs/SYNC.md, čeká na odsouhlasení Vojtou
-**Další krok:** Fáze 1 — 1.1 Docker Compose + 1.2 Next.js skeleton (po odsouhlasení)
+**Poslední aktualizace:** 2026-08-13 (noc)
+**Aktuální fáze:** Fáze 1 — Základ (HOTOVÁ, akceptace ověřena v prohlížeči)
+**Právě rozpracováno:** nic — čeká se na odsouhlasení Fáze 1 Vojtou
+**Další krok:** Fáze 2 — 2.1 Schéma kuchařky (recipes, ingredience, kroky, kategorie, tagy)
 
 ## Jak projekt spustit
 
-Zatím není co spouštět — projekt je ve fázi návrhu (žádný aplikační kód).
+```bash
+docker compose up -d db
+pnpm install
+pnpm db:migrate
+pnpm db:seed        # volitelné: testovací účty (jen do prázdné DB)
+pnpm dev            # http://localhost:3000
+```
+
+Testovací přihlášení: vojta@test.local / heslo123 (admin), eliska@test.local / heslo123 (člen).
+Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes winget) a Docker Desktop (starší, 20.10 — funguje).
 
 ## Známé problémy / TODO
 
-- [ ] Zatím žádné.
+- [ ] `pnpm build` lokálně na Windows běží bez `output: 'standalone'` (symlink EPERM); Docker build nastaví `BUILD_STANDALONE=1` — viz next.config.ts
+- [ ] HEIC upload fotek — ověřit podporu sharp/libheif v Docker buildu (Fáze 2)
+- [ ] SMTP pro reset hesla zatím chybí — odkaz se loguje do konzole serveru (záměr, viz ARCHITECTURE.md §1.3)
+- [ ] CI workflow (.github/workflows/ci.yml) je připravený, ale repo nemá GitHub remote — aktivuje se až po pushnutí
 
 ## Rozhodnutí, která čekají na Vojtu
 
-- [ ] Odsouhlasení sync protokolu (docs/SYNC.md) — zadání §7 to výslovně vyžaduje před psaním kódu
-- [ ] Vizuální identita (docs/DESIGN.md) — stačí tiché schválení, případné výhrady k barvám/fontům
+- [ ] Odsouhlasení Fáze 1 (akceptace splněna: registrace, přihlášení, domácnost, pozvánka, ověřeno v prohlížeči)
 
 ---
 
@@ -38,18 +49,18 @@ Zatím není co spouštět — projekt je ve fázi návrhu (žádný aplikační
 
 ## Fáze 1 — Základ
 
-- [ ] 1.1 Docker Compose (app + postgres), volume pro data
-- [ ] 1.2 Next.js 15 skeleton (App Router, TypeScript strict, `output: 'standalone'`), pnpm, ESLint, Prettier
-- [ ] 1.3 Tailwind CSS v4 + shadcn/ui, základní design tokens dle docs/DESIGN.md
-- [ ] 1.4 Drizzle ORM + drizzle-kit, první migrace (users, sessions, households, household_members, household_invites, change_log + triggery)
-- [ ] 1.5 DB rozšíření: unaccent, pg_trgm, uuid-ossp
-- [ ] 1.6 Autentizace: registrace, přihlášení, odhlášení, serverové session, argon2id
-- [ ] 1.7 Domácnost: vytvoření, pozvánky přes jednorázový token, role admin/member
-- [ ] 1.8 Reset hesla přes token (e-mail zatím log do konzole)
-- [ ] 1.9 Základní layout a navigace (mobilní spodní lišta, desktop navigace)
-- [ ] 1.10 Health-check endpoint
-- [ ] 1.11 CI kontrola buildu (pnpm build)
-- [ ] 1.12 Akceptace Fáze 1: běží v Dockeru, registrace, přihlášení, domácnost, pozvánka druhého člena
+- [x] 1.1 Docker Compose (postgres 16 + volume) — hotovo 2026-08-13 (app kontejner až ve Fázi 11, viz docker-compose.yml)
+- [x] 1.2 Next.js 15 skeleton (App Router, TS strict, standalone podmíněně), pnpm, ESLint, Prettier — hotovo 2026-08-13
+- [x] 1.3 Tailwind v4 design tokens dle docs/DESIGN.md, světlý+tmavý režim, fonty Fraunces+Inter (fontsource) — hotovo 2026-08-13 (shadcn/ui komponenty se přidají ve Fázi 2 podle potřeby)
+- [x] 1.4 Drizzle + migrace 0000 (users, sessions, households, members, invites, reset tokeny, change_log, backup_runs) — hotovo 2026-08-13
+- [x] 1.5 Rozšíření unaccent, pg_trgm, uuid-ossp + immutable_unaccent + triggery (set_updated_at, log_change) — migrace 0001, hotovo 2026-08-13
+- [x] 1.6 Autentizace: argon2id, hashované session tokeny, klouzavá expirace, rate limiting — hotovo 2026-08-13
+- [x] 1.7 Domácnost: první uživatel = admin + založení, pozvánky (jednorázový token, 7 dní), role — hotovo 2026-08-13
+- [x] 1.8 Reset hesla (token 1 h, log do konzole, zneplatnění sessions) — hotovo 2026-08-13
+- [x] 1.9 Layout a navigace: mobilní spodní lišta (Kuchařka první), desktop horní lišta, auth stránky, Nastavení — hotovo 2026-08-13
+- [x] 1.10 Health-check endpoint /api/health (ověřeno: {"status":"ok","db":"ok"}) — hotovo 2026-08-13
+- [x] 1.11 CI workflow připraven (.github/workflows/ci.yml: lint+typecheck+test+build); lokálně vše prochází — hotovo 2026-08-13
+- [x] 1.12 Akceptace: ověřeno v prohlížeči — registrace Vojty (založena domácnost Mykiskovi, admin), pozvánka, registrace Elišky přes pozvánku (člen), odhlášení/přihlášení, oba režimy vzhledu — 2026-08-13
 
 ## Fáze 2 — Kuchařka (nejdůležitější fáze)
 

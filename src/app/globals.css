@@ -1,26 +1,70 @@
 @import "tailwindcss";
 
+/* Design tokens — docs/DESIGN.md. Light is the default; dark applies via the
+   `.dark` class on <html> (set by the inline theme script, no FOUC). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf6ef;
+  --surface: #ffffff;
+  --surface-warm: #f3ecdf;
+  --foreground: #2d2620;
+  --muted-foreground: #7a7064;
+  --primary: #c2571b;
+  --primary-foreground: #fff8f2;
+  --accent-green: #5a7052;
+  --destructive: #a63a2b;
+  --warning: #b07a26;
+  --border: #e5dccc;
+  --ring: var(--primary);
+  --radius: 12px;
+  --shadow-card: 0 1px 3px rgb(45 38 32 / 0.08);
+  --shadow-pop: 0 8px 24px rgb(45 38 32 / 0.12);
+}
+
+.dark {
+  --background: #201b16;
+  --surface: #2a241e;
+  --surface-warm: #332c24;
+  --foreground: #f0e9de;
+  --muted-foreground: #a89c8c;
+  --primary: #e07a3e;
+  --primary-foreground: #241505;
+  --accent-green: #8fa983;
+  --destructive: #d06a5a;
+  --warning: #d9a44e;
+  --border: #3d352c;
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.4);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-warm: var(--surface-warm);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent-green: var(--accent-green);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius-card: var(--radius);
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
 }

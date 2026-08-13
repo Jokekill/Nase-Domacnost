@@ -34,3 +34,5 @@ test-results/
 
 # Local data (uploads, backups when running outside Docker)
 /data/
+
+tsconfig.tsbuildinfo
