@@ -10,6 +10,9 @@ import {
   foodCategoryClosure,
   foodUnits,
   foods,
+  mealTypes,
+  storeSections,
+  taskLists,
 } from "./schema";
 
 type SeedCategory = {
@@ -40,6 +43,9 @@ type SeedFile = {
   foodCategories: SeedCategory[];
   foods: SeedFood[];
   recipeCategories: SeedCategory[];
+  mealTypes: string[];
+  taskLists: string[];
+  storeSections: { name: string; foodCategories: string[] }[];
 };
 
 let cached: SeedFile | null = null;
@@ -80,8 +86,37 @@ export async function seedHouseholdCatalogue(
   tx: SeedTx,
   householdId: string,
   userId: string,
-): Promise<{ foodCategories: number; foods: number; recipeCategories: number }> {
+): Promise<{
+  foodCategories: number;
+  foods: number;
+  recipeCategories: number;
+  storeSections: number;
+  mealTypes: number;
+}> {
   const seed = await loadSeedFile();
+
+  /* ---- store sections (referenced by food categories) ---- */
+  const sectionIds = new Map<string, string>();
+  await tx.insert(storeSections).values(
+    seed.storeSections.map((section, index) => {
+      const id = uuidv7();
+      sectionIds.set(section.name, id);
+      return {
+        id,
+        householdId,
+        name: section.name,
+        sortOrder: index,
+        lastModifiedBy: userId,
+      };
+    }),
+  );
+  // food category key -> store section id
+  const sectionByFoodCategory = new Map<string, string>();
+  for (const section of seed.storeSections) {
+    for (const key of section.foodCategories) {
+      sectionByFoodCategory.set(key, sectionIds.get(section.name)!);
+    }
+  }
 
   /* ---- food categories (+ closure) ---- */
   const foodCatIds = new Map<string, string>();
@@ -95,6 +130,8 @@ export async function seedHouseholdCatalogue(
       name: node.name,
       parentId: node.parentKey ? foodCatIds.get(node.parentKey)! : null,
       sortOrder: node.order,
+      // Only top-level groups carry the mapping; children inherit it.
+      storeSectionId: sectionByFoodCategory.get(node.key) ?? null,
       lastModifiedBy: userId,
     })),
   );
@@ -180,9 +217,31 @@ export async function seedHouseholdCatalogue(
     }
   }
 
+  /* ---- meal types and task lists ---- */
+  await tx.insert(mealTypes).values(
+    seed.mealTypes.map((name, index) => ({
+      id: uuidv7(),
+      householdId,
+      name,
+      sortOrder: index,
+      lastModifiedBy: userId,
+    })),
+  );
+  await tx.insert(taskLists).values(
+    seed.taskLists.map((name, index) => ({
+      id: uuidv7(),
+      householdId,
+      name,
+      sortOrder: index,
+      lastModifiedBy: userId,
+    })),
+  );
+
   return {
     foodCategories: flatFoodCats.length,
     foods: foodRows.length,
     recipeCategories: flatRecipeCats.length,
+    storeSections: seed.storeSections.length,
+    mealTypes: seed.mealTypes.length,
   };
 }

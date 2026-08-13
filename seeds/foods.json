@@ -311,6 +311,19 @@
     { "name": "Káva zrnková (mletá)", "category": "napoje", "energyKj": null, "proteinG": null, "carbsG": null, "sugarsG": null, "fiberG": null, "fatG": null, "satFatG": null, "saltG": null, "units": [{ "unit": "lzice", "gramsPerUnit": 7 }] },
     { "name": "Pomerančový džus", "category": "napoje", "referenceUnit": "100ml", "energyKj": 190, "proteinG": 0.7, "carbsG": 10, "sugarsG": 9, "fiberG": 0.2, "fatG": 0.1, "satFatG": 0.02, "saltG": 0.01, "densityGPerMl": 1.04 }
   ],
+  "mealTypes": ["Snídaně", "Dopolední svačina", "Oběd", "Odpolední svačina", "Večeře"],
+  "taskLists": ["Úklid", "Nákup", "Opravy", "Zahrada", "Administrativa"],
+  "$storeSections": "Pořadí odpovídá průchodu běžným obchodem; klíč mapuje skupiny potravin na sekci.",
+  "storeSections": [
+    { "name": "Ovoce a zelenina", "foodCategories": ["zelenina", "ovoce"] },
+    { "name": "Pečivo", "foodCategories": ["pecivo"] },
+    { "name": "Mléčné a chlazené", "foodCategories": ["mlecne"] },
+    { "name": "Maso a ryby", "foodCategories": ["maso"] },
+    { "name": "Trvanlivé potraviny", "foodCategories": ["obiloviny", "lusteniny", "orechy", "tuky", "omacky"] },
+    { "name": "Koření a pečení", "foodCategories": ["koreni", "pecici", "sladidla"] },
+    { "name": "Nápoje", "foodCategories": ["napoje"] },
+    { "name": "Drogerie", "foodCategories": [] }
+  ],
   "recipeCategories": [
     { "key": "predkrmy", "name": "Předkrmy" },
     { "key": "polevky", "name": "Polévky" },

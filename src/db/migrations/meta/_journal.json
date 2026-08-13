@@ -36,6 +36,20 @@
       "when": 1786652288315,
       "tag": "0004_naive_gauntlet",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786655641380,
+      "tag": "0005_young_luke_cage",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786655650266,
+      "tag": "0006_planning_triggers",
+      "breakpoints": true
     }
   ]
 }
