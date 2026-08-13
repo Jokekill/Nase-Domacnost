@@ -4,6 +4,29 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-010 — Fonty: Fraunces + Inter, self-hostované (2026-08-13)
+
+**Co:** Nadpisy serif Fraunces, UI sans Inter; oba variabilní, s češtinou, licence OFL, soubory v repu. Stejné soubory pro web (`next/font/local`) i PDF (`@react-pdf/renderer`).
+**Proč:** Žádný CDN (soukromí, offline, Tailscale), jedna sada fontů všude, diakritika v PDF vyřešená od začátku.
+**Alternativy:** Google Fonts CDN (odpadá — externí závislost), Playfair Display (tvrdší, méně „domácký" než Fraunces).
+
+## D-009 — Zálohy přes sidecar kontejner s cronem (2026-08-13)
+
+**Co:** Samostatný `backup` kontejner v compose (postgres-client + cron): denní pg_dump + tar uploads, retence 7/4/12, výsledky do `backup_runs`, ruční spuštění přes trigger soubor. Tentýž cron dělá úklid expirovaných tokenů/sessions.
+**Proč:** Nezávislé na životě app kontejneru, jednoduché, bez externích služeb.
+**Alternativy:** Cron uvnitř app kontejneru (spadne s appkou, míchá zodpovědnosti), host cron na OMV (mimo compose, hůř přenositelné).
+
+## D-008 — Sync: field-level LWW přes `field_mtimes` jsonb na řádku (2026-08-13)
+
+**Co:** Každý synchronizovaný řádek nese `field_mtimes` (pole → čas poslední změny), udržované společným zápisovým helperem pro online API i sync push. Merge po polích; `effectiveTs = min(clientTs, čas přijetí)`; checked/done vyhrává u souběžných konfliktů; delete vyhrává nad update; zahozené změny se hlásí uživateli. Idempotence pushů přes `sync_applied_ops`, kurzor přes `change_log.seq`. Detail v docs/SYNC.md.
+**Proč:** Field-level merge bez samostatné tabulky verzí (méně JOINů), clamp řeší rozjeté hodiny, pravidla odpovídají zadání §7.
+**Alternativy:** Row-level LWW (přepisoval by souběžné editace různých polí), CRDT (zbytečně složité pro 2 uživatele), tabulka `sync_field_state` (víc zápisů a JOINů než jsonb na řádku).
+
+## D-007 — Datový model odsouhlasen Vojtou (2026-08-13)
+
+**Co:** Návrh v docs/DATA-MODEL.md schválen bez výhrad, včetně closure table, JSONB snapshotů, rrule opakování a mapování sekcí obchodu přes food_categories.
+**Proč:** Explicitní souhlas v konverzaci.
+
 ## D-006 — Nutriční hodnoty: typované sloupce ve `foods`, snapshoty jako JSONB (2026-08-13)
 
 **Co:** `foods` má pevné typované sloupce (energy_kj, protein_g, carbs_g, sugars_g, fiber_g, fat_g, sat_fat_g, salt_g — vše nullable). Snapshoty v deníku a nutriční cíle používají obecný klíč veličiny (`nutrient_key`), deník ukládá JSONB mapu.

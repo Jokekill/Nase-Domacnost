@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
-**Poslední aktualizace:** 2026-08-13 (odpoledne)
-**Aktuální fáze:** Fáze 0 — Analýza a návrh
-**Právě rozpracováno:** 0.2 Návrh datového modelu — návrh v docs/DATA-MODEL.md, čeká na odsouhlasení Vojtou
-**Další krok:** 0.3 Návrh API (po odsouhlasení datového modelu)
+**Poslední aktualizace:** 2026-08-13 (večer)
+**Aktuální fáze:** Fáze 0 — Analýza a návrh (dokončena, čeká na odsouhlasení SYNC.md)
+**Právě rozpracováno:** 0.8 Sync protokol — návrh v docs/SYNC.md, čeká na odsouhlasení Vojtou
+**Další krok:** Fáze 1 — 1.1 Docker Compose + 1.2 Next.js skeleton (po odsouhlasení)
 
 ## Jak projekt spustit
 
@@ -15,7 +15,8 @@ Zatím není co spouštět — projekt je ve fázi návrhu (žádný aplikační
 
 ## Rozhodnutí, která čekají na Vojtu
 
-- [ ] Odsouhlasení návrhu datového modelu (docs/DATA-MODEL.md)
+- [ ] Odsouhlasení sync protokolu (docs/SYNC.md) — zadání §7 to výslovně vyžaduje před psaním kódu
+- [ ] Vizuální identita (docs/DESIGN.md) — stačí tiché schválení, případné výhrady k barvám/fontům
 
 ---
 
@@ -26,14 +27,14 @@ Zatím není co spouštět — projekt je ve fázi návrhu (žádný aplikační
 - [x] 0.11 Založení repozitáře, PROGRESS.md, docs/DECISIONS.md, kompletní checklist — hotovo 2026-08-13 *(uděláno jako první krok dle zadání)*
 - [x] 0.1 Analýza požadavků, seznam nejasností a otázek — hotovo 2026-08-13, odpovědi zapsány v docs/DECISIONS.md (D-003)
 - [x] 0.9 Seznam nejrizikovějších částí a plán řešení — odesláno 2026-08-13 spolu s otázkami
-- [ ] 0.2 Návrh datového modelu → docs/DATA-MODEL.md — návrh hotov 2026-08-13, ČEKÁ NA ODSOUHLASENÍ
-- [ ] 0.3 Návrh API → docs/API.md
-- [ ] 0.4 Návrh systému oprávnění
-- [ ] 0.5 Návrh ukládání fotek
-- [ ] 0.6 Návrh zálohování
-- [ ] 0.7 Návrh autentizace
-- [ ] 0.8 Návrh sync protokolu pro offline → docs/SYNC.md
-- [ ] 0.10 Vizuální identita → docs/DESIGN.md
+- [x] 0.2 Návrh datového modelu → docs/DATA-MODEL.md — odsouhlaseno Vojtou 2026-08-13 (D-007)
+- [x] 0.3 Návrh API → docs/API.md — hotovo 2026-08-13
+- [x] 0.4 Návrh systému oprávnění — hotovo 2026-08-13, docs/ARCHITECTURE.md §2
+- [x] 0.5 Návrh ukládání fotek — hotovo 2026-08-13, docs/ARCHITECTURE.md §3
+- [x] 0.6 Návrh zálohování — hotovo 2026-08-13, docs/ARCHITECTURE.md §4
+- [x] 0.7 Návrh autentizace — hotovo 2026-08-13, docs/ARCHITECTURE.md §1
+- [ ] 0.8 Návrh sync protokolu → docs/SYNC.md — návrh hotov 2026-08-13, ČEKÁ NA ODSOUHLASENÍ
+- [x] 0.10 Vizuální identita → docs/DESIGN.md — hotovo 2026-08-13
 
 ## Fáze 1 — Základ
 
