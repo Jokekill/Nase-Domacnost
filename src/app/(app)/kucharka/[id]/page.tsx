@@ -12,6 +12,7 @@ import type {
 } from "@/lib/domain/nutrition";
 import { formatScaled, scaleIngredient } from "@/lib/domain/servings";
 import { NutritionPanel } from "@/components/recipes/nutrition-panel";
+import { ReverseCalculator } from "@/components/recipes/reverse-calculator";
 import {
   DIFFICULTY_LABELS,
   UNIT_LABELS,
@@ -92,6 +93,18 @@ export default function RecipeDetailPage() {
       `${name}: ${formatScaled(scaled.exact)} ${unit} → ${formatScaled(scaled.rounded)} ${unit}`.trim(),
     ];
   });
+
+  const nutritionIngredients: NutritionIngredient[] = recipe.ingredients.map(
+    (i) => ({
+      id: i.id,
+      amount: i.amount,
+      unit: i.unit,
+      isOptional: i.isOptional,
+      nutritionOverride: i.nutritionOverride ?? null,
+      food: i.food,
+      label: i.foodName ?? i.freeText ?? "ingredience",
+    }),
+  );
 
   const ungrouped = recipe.ingredients.filter((i) => !i.groupId);
   const groupsWithItems = recipe.groups
@@ -253,15 +266,12 @@ export default function RecipeDetailPage() {
       </div>
 
       <NutritionPanel
-        ingredients={recipe.ingredients.map((i) => ({
-          id: i.id,
-          amount: i.amount,
-          unit: i.unit,
-          isOptional: i.isOptional,
-          nutritionOverride: i.nutritionOverride ?? null,
-          food: i.food,
-          label: i.foodName ?? i.freeText ?? "ingredience",
-        }))}
+        ingredients={nutritionIngredients}
+        baseServings={recipe.baseServings}
+        servings={currentServings}
+      />
+      <ReverseCalculator
+        ingredients={nutritionIngredients}
         baseServings={recipe.baseServings}
         servings={currentServings}
       />

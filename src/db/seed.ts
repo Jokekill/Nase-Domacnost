@@ -3,7 +3,6 @@ import { hash } from "@node-rs/argon2";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { uuidv7 } from "uuidv7";
-import type { db } from "./client";
 import { seedHouseholdCatalogue } from "./seed-catalogue";
 import * as schema from "./schema";
 
