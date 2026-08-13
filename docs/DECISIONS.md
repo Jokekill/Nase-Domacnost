@@ -4,6 +4,16 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-015 — Nutriční výpočty: převody, součty, reverzní výpočet (2026-08-13)
+
+**Co:** Tři čisté knihovny v `src/lib/domain/`, schváleno Vojtou předem.
+- `units.ts` — převody vrací buď hodnotu, nebo **důvod selhání** (`no_density`, `no_grams_per_piece`, `no_food_unit`, `not_quantifiable`…). Nikdy se nehádá. Lžíce/lžička jen z `food_units` dané potraviny (lžíce mouky ≠ lžíce oleje).
+- `nutrition.ts` — hodnoty se škálují podle `reference_unit` (100g/100ml/piece). Chybějící hodnota zůstává `null`, nikdy se nenahrazuje nulou. Nepřevoditelná ingredience se nezapočítá a recept se označí `incomplete` se seznamem chybějícího. `nutrition_override` nahrazuje hodnoty potraviny **na referenční jednotku** jen v daném receptu a hlásí se přes `overriddenKeys`. Volitelné ingredience se počítají a UI to uvede. Na porci = celek / základní porce (konstantní při škálování).
+- `reverse.ts` — obecně přes libovolnou veličinu (`NutrientKey`), koeficient `k` na odemčené ingredience; chyby `no_free_contribution`, `locked_exceeds_target`, `invalid_target`; varování při k < 0,3 nebo k > 3; po zaokrouhlení se **přepočítá skutečná výsledná hodnota** a reportuje se místo teoretické.
+- 59 jednotkových testů (Vitest) pokrývá i okrajové případy ze zadání (2 ks vejce bez hmotnosti, špetka, zamčené ingredience překračující cíl).
+
+**Alternativy:** Globální tabulka převodů lžic (odmítnuto — lže), dosazování nul za chybějící hodnoty (odmítnuto — tichá lež v součtech).
+
 ## D-014 — Přepočet porcí: návrh odsouhlasen a implementován (2026-08-13)
 
 **Co:** Čisté funkce v `src/lib/domain/servings.ts` (16 testů). Lineární koeficient + „lidské" zaokrouhlení dle §6.2; kg/l se zaokrouhlují přes ×1000 ekvivalent; koření = potravina ve stromu pod kategorií se `search_normalized='koreni'` nebo jednotka lžička/špetka; `foods.divisible_pieces` pro půlitelné kusy; špetka/dle chuti se nemění; kladná hodnota se nikdy nezaokrouhlí na nulu (bump na nejmenší krok). Varování při odchylce > 15 % — v UI ⚠️ u položky, souhrn pod ingrediencemi, přesná hodnota v tooltipu. Přepočet je jen pohled, data se nemění.
