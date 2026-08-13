@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
-**Poslední aktualizace:** 2026-08-13
+**Poslední aktualizace:** 2026-08-13 (odpoledne)
 **Aktuální fáze:** Fáze 0 — Analýza a návrh
-**Právě rozpracováno:** 0.1 Analýza požadavků a otázky — otázky odeslány Vojtovi, čeká se na odpovědi
-**Další krok:** 0.2 Návrh datového modelu (po zodpovězení otázek)
+**Právě rozpracováno:** 0.2 Návrh datového modelu — návrh v docs/DATA-MODEL.md, čeká na odsouhlasení Vojtou
+**Další krok:** 0.3 Návrh API (po odsouhlasení datového modelu)
 
 ## Jak projekt spustit
 
@@ -15,7 +15,7 @@ Zatím není co spouštět — projekt je ve fázi návrhu (žádný aplikační
 
 ## Rozhodnutí, která čekají na Vojtu
 
-- [ ] Odpovědi na otázky z kroku 0.1 (viz shrnutí v konverzaci, 2026-08-13)
+- [ ] Odsouhlasení návrhu datového modelu (docs/DATA-MODEL.md)
 
 ---
 
@@ -24,9 +24,9 @@ Zatím není co spouštět — projekt je ve fázi návrhu (žádný aplikační
 ## Fáze 0 — Analýza a návrh (žádný aplikační kód)
 
 - [x] 0.11 Založení repozitáře, PROGRESS.md, docs/DECISIONS.md, kompletní checklist — hotovo 2026-08-13 *(uděláno jako první krok dle zadání)*
-- [x] 0.1 Analýza požadavků, seznam nejasností a otázek — otázky odeslány 2026-08-13, čeká se na odpovědi
+- [x] 0.1 Analýza požadavků, seznam nejasností a otázek — hotovo 2026-08-13, odpovědi zapsány v docs/DECISIONS.md (D-003)
 - [x] 0.9 Seznam nejrizikovějších částí a plán řešení — odesláno 2026-08-13 spolu s otázkami
-- [ ] 0.2 Návrh datového modelu → docs/DATA-MODEL.md (nechat odsouhlasit)
+- [ ] 0.2 Návrh datového modelu → docs/DATA-MODEL.md — návrh hotov 2026-08-13, ČEKÁ NA ODSOUHLASENÍ
 - [ ] 0.3 Návrh API → docs/API.md
 - [ ] 0.4 Návrh systému oprávnění
 - [ ] 0.5 Návrh ukládání fotek
@@ -77,7 +77,9 @@ Zatím není co spouštět — projekt je ve fázi návrhu (žádný aplikační
 - [ ] 3.7 Open Food Facts: hledání podle názvu, rate limit, User-Agent, cache
 - [ ] 3.8 Čárové kódy: BarcodeDetector + fallback zxing-js
 - [ ] 3.9 Reverzní výpočet se zamykáním ingrediencí + varování + testy
-- [ ] 3.10 Akceptace Fáze 3: správné hodnoty na porci, reverzní výpočet funguje a varuje, testy prochází
+- [ ] 3.10 Specifikace importního formátu receptů → docs/IMPORT-RECIPES.md (Vojta převede PDF recepty přes AI do tohoto formátu; spec napsat co nejdřív, ať může začít)
+- [ ] 3.11 Import receptů z JSON souboru (validace, náhled, hlášení chyb)
+- [ ] 3.12 Akceptace Fáze 3: správné hodnoty na porci, reverzní výpočet funguje a varuje, testy prochází
 
 ## Fáze 4 — Jídelníček a kalendář
 
