@@ -126,12 +126,14 @@ export default function RecipeDetailPage() {
       </div>
 
       {mainPhoto && (
-        <div className="mb-4 overflow-hidden rounded-card">
+        // Fixed aspect ratio reserves the space before the image loads —
+        // without it the content below jumps and swallows clicks.
+        <div className="mb-4 aspect-[16/9] max-h-[420px] overflow-hidden rounded-card bg-surface-warm">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/files/${mainPhoto.storageKey}?v=full`}
             alt={recipe.title}
-            className="max-h-[420px] w-full object-cover"
+            className="h-full w-full object-cover"
           />
         </div>
       )}
@@ -163,28 +165,31 @@ export default function RecipeDetailPage() {
           <h2 className="mb-2 text-xl font-semibold">Ingredience</h2>
           <div className="mb-3 flex items-center gap-2">
             <button
+              type="button"
               onClick={() =>
                 setServings(Math.max(1, currentServings - 1))
               }
-              className="h-9 w-9 rounded-lg border border-border text-lg hover:bg-surface-warm"
+              className="h-11 w-11 select-none rounded-lg border border-border text-xl hover:bg-surface-warm active:bg-surface-warm"
               aria-label="Méně porcí"
             >
               −
             </button>
-            <span className="min-w-20 text-center text-sm font-medium">
+            <span className="min-w-20 select-none text-center text-sm font-medium">
               {currentServings} porcí
             </span>
             <button
+              type="button"
               onClick={() => setServings(currentServings + 1)}
-              className="h-9 w-9 rounded-lg border border-border text-lg hover:bg-surface-warm"
+              className="h-11 w-11 select-none rounded-lg border border-border text-xl hover:bg-surface-warm active:bg-surface-warm"
               aria-label="Více porcí"
             >
               +
             </button>
             {isScaled && (
               <button
+                type="button"
                 onClick={() => setServings(null)}
-                className="text-sm text-primary hover:underline"
+                className="min-h-11 text-sm text-primary hover:underline"
               >
                 původní ({recipe.baseServings})
               </button>
