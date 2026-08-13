@@ -5,7 +5,16 @@ import { useEffect, useRef, useState } from "react";
 import { uuidv7 } from "uuidv7";
 import { apiFetch } from "@/lib/api/client";
 
-type Food = { id: string; name: string; foodCategoryId: string | null };
+import type { NutritionValues } from "@/lib/domain/nutrition";
+
+export type PickedFood = NutritionValues & {
+  id: string;
+  name: string;
+  foodCategoryId: string | null;
+  referenceUnit?: string | null;
+  densityGPerMl?: number | null;
+  gramsPerPiece?: number | null;
+};
 type FoodCategory = { id: string; name: string; parentId: string | null };
 
 /**
@@ -21,7 +30,11 @@ export function FoodPicker({
 }: {
   value: string | null;
   valueName: string | null;
-  onChange: (foodId: string | null, foodName: string | null) => void;
+  onChange: (
+    foodId: string | null,
+    foodName: string | null,
+    food: PickedFood | null,
+  ) => void;
   /** Fires as the user types — keeps plain-text ingredients in form state. */
   onTextChange: (text: string) => void;
 }) {
@@ -46,7 +59,7 @@ export function FoodPicker({
   const { data } = useQuery({
     queryKey: ["foods", term],
     queryFn: () =>
-      apiFetch<{ items: Food[] }>(
+      apiFetch<{ items: PickedFood[] }>(
         `/api/foods?q=${encodeURIComponent(term)}`,
       ),
     enabled: open,
@@ -73,7 +86,12 @@ export function FoodPicker({
       },
     });
     await queryClient.invalidateQueries({ queryKey: ["foods"] });
-    onChange(id, term.trim());
+    onChange(id, term.trim(), {
+      id,
+      name: term.trim(),
+      foodCategoryId: createCategoryId || null,
+      referenceUnit: "100g",
+    });
     setCreating(false);
     setOpen(false);
   }
@@ -86,7 +104,7 @@ export function FoodPicker({
           setTerm(e.target.value);
           setOpen(true);
           onTextChange(e.target.value);
-          if (value) onChange(null, null); // typing detaches the selected food
+          if (value) onChange(null, null, null); // typing detaches the food
         }}
         onFocus={() => setOpen(true)}
         placeholder="Surovina (např. hladká mouka)"
@@ -109,7 +127,7 @@ export function FoodPicker({
               key={f.id}
               type="button"
               onClick={() => {
-                onChange(f.id, f.name);
+                onChange(f.id, f.name, f);
                 setTerm(f.name);
                 setOpen(false);
               }}

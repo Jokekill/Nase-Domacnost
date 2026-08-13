@@ -32,6 +32,19 @@ export const GET = apiHandler(async (req: NextRequest) => {
       id: foods.id,
       name: foods.name,
       foodCategoryId: foods.foodCategoryId,
+      referenceUnit: foods.referenceUnit,
+      energyKj: foods.energyKj,
+      proteinG: foods.proteinG,
+      carbsG: foods.carbsG,
+      sugarsG: foods.sugarsG,
+      fiberG: foods.fiberG,
+      fatG: foods.fatG,
+      satFatG: foods.satFatG,
+      saltG: foods.saltG,
+      densityGPerMl: foods.densityGPerMl,
+      gramsPerPiece: foods.gramsPerPiece,
+      divisiblePieces: foods.divisiblePieces,
+      source: foods.source,
     })
     .from(foods)
     .where(and(...conditions))

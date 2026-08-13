@@ -7,8 +7,10 @@ import { useFieldArray, useForm, Controller } from "react-hook-form";
 import { uuidv7 } from "uuidv7";
 import { apiFetch } from "@/lib/api/client";
 import { UNITS } from "@/db/schema";
+import type { NutritionValues } from "@/lib/domain/nutrition";
 import { UNIT_LABELS, DIFFICULTY_LABELS } from "@/lib/recipes/types";
-import { FoodPicker } from "./food-picker";
+import { FoodPicker, type PickedFood } from "./food-picker";
+import { NutritionOverrideEditor } from "./nutrition-override-editor";
 
 /* Form state keeps numbers as strings (inputs); converted on submit. */
 type IngredientField = {
@@ -16,6 +18,9 @@ type IngredientField = {
   groupId: string;
   foodId: string | null;
   foodName: string | null;
+  /** Database values, used as placeholders in the override editor. */
+  food: PickedFood | null;
+  nutritionOverride: NutritionValues | null;
   freeText: string;
   amount: string;
   unit: string;
@@ -63,6 +68,8 @@ export type RecipeAggregate = {
     groupId: string | null;
     foodId: string | null;
     foodName: string | null;
+    food?: PickedFood | null;
+    nutritionOverride?: NutritionValues | null;
     freeText: string | null;
     amount: number | null;
     unit: string | null;
@@ -97,6 +104,8 @@ function toFormValues(recipe?: RecipeAggregate): RecipeFormValues {
         groupId: i.groupId ?? "",
         foodId: i.foodId,
         foodName: i.foodName,
+        food: i.food ?? null,
+        nutritionOverride: i.nutritionOverride ?? null,
         freeText: i.freeText ?? "",
         amount: i.amount != null ? String(i.amount) : "",
         unit: i.unit ?? "",
@@ -145,6 +154,7 @@ function buildPayload(recipeId: string, v: RecipeFormValues) {
         note: i.note.trim() || null,
         isOptional: i.isOptional,
         sortOrder: idx,
+        nutritionOverride: i.foodId ? i.nutritionOverride : null,
       })),
     steps: v.steps
       .filter((s) => s.text.trim())
@@ -346,8 +356,17 @@ export function RecipeForm({
                       <FoodPicker
                         value={value.foodId}
                         valueName={value.foodName ?? value.freeText}
-                        onChange={(foodId, foodName) =>
-                          onChange({ ...value, foodId, foodName })
+                        onChange={(foodId, foodName, food) =>
+                          onChange({
+                            ...value,
+                            foodId,
+                            foodName,
+                            food,
+                            // Overrides belong to a specific food.
+                            nutritionOverride: foodId
+                              ? value.nutritionOverride
+                              : null,
+                          })
                         }
                         onTextChange={(text) =>
                           onChange({ ...value, freeText: text })
@@ -410,6 +429,22 @@ export function RecipeForm({
                 placeholder="Poznámka (nahrubo nasekaná, pokojové teploty…)"
                 className={inputCls}
               />
+              {watch(`ingredients.${i}.foodId`) && (
+                <Controller
+                  control={control}
+                  name={`ingredients.${i}`}
+                  render={({ field: { value, onChange } }) => (
+                    <NutritionOverrideEditor
+                      foodName={value.foodName ?? value.freeText}
+                      food={value.food}
+                      value={value.nutritionOverride}
+                      onChange={(next) =>
+                        onChange({ ...value, nutritionOverride: next })
+                      }
+                    />
+                  )}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -421,6 +456,8 @@ export function RecipeForm({
               groupId: "",
               foodId: null,
               foodName: null,
+              food: null,
+              nutritionOverride: null,
               freeText: "",
               amount: "",
               unit: "",
