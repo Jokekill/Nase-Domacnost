@@ -105,8 +105,7 @@ Stejné rozhraní má `/api/food-categories` (Fáze 3).
 | POST/PATCH/DELETE | `/api/meal-plan/entries[/:id]` | správa položek |
 | GET/POST/PATCH/DELETE | `/api/meal-types[...]` | konfigurace typů jídel |
 | GET  | `/api/prep-suggestions?from=&to=` | návrhy „připravit předem" |
-| POST | `/api/prep-suggestions/:id/accept` | vytvoří úkol, stav accepted |
-| POST | `/api/prep-suggestions/:id/dismiss` | stav dismissed (víckrát se nenabídne) |
+| POST | `/api/prep-suggestions/:id` | `{action: "accept" \| "dismiss", name?, date?}` — accept vytvoří úkol |
 | GET  | `/api/calendar?from=&to=` | agregovaný pohled: jídelníček + úkoly + nákupy + události (rozbalené instance rrule) |
 | POST/PATCH/DELETE | `/api/calendar/events[/:id]` | obecné události |
 | PUT  | `/api/calendar/events/:id/overrides/:date` | výjimka instance opakování |
@@ -116,10 +115,11 @@ Stejné rozhraní má `/api/food-categories` (Fáze 3).
 | Metoda | Cesta | Popis |
 |---|---|---|
 | GET/POST/PATCH/DELETE | `/api/shopping-lists[/:id]` | seznamy (období od–do) |
-| POST | `/api/shopping-lists/:id/import` | `{recipeId, servings}` nebo `{mealPlanFrom, mealPlanTo}` — sloučení dle pravidel 6.5 |
-| POST/PATCH/DELETE | `/api/shopping-lists/:id/items[/:itemId]` | položky |
-| POST | `/api/shopping-items/:id/check` / `/uncheck` | rychlé odškrtnutí (idempotentní, offline-friendly) |
-| GET/POST/PATCH/DELETE | `/api/store-sections[...]` | sekce obchodu + pořadí |
+| POST | `/api/shopping-lists/:id/import` | `{recipeId, servings?}` nebo `{mealPlanFrom, mealPlanTo}`; vrací `{added, merged}` |
+| POST | `/api/shopping-lists/:id/items` | ruční položka |
+| PATCH/DELETE | `/api/shopping-items/:id` | úprava / soft delete |
+| POST | `/api/shopping-items/:id/check` | `{checked: bool}` — idempotentní, offline-friendly |
+| GET | `/api/store-sections` | sekce obchodu v pořadí průchodu obchodem |
 
 ## Úkoly (Fáze 6)
 

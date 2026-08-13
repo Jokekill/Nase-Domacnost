@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
-**Poslední aktualizace:** 2026-08-14
-**Aktuální fáze:** Fáze 3 — Nutriční systém (HOTOVÁ, akceptace ověřena)
-**Právě rozpracováno:** nic — čeká se na odsouhlasení Fáze 3 Vojtou
-**Další krok:** Fáze 4 — Jídelníček a kalendář (4.1 schéma meal_types, meal_plan_entries, calendar_events)
+**Poslední aktualizace:** 2026-08-14 (večer)
+**Aktuální fáze:** Fáze 4 a 5 HOTOVÉ (jídelníček, kalendář, nákup) — ověřeno v prohlížeči
+**Právě rozpracováno:** nic — čeká se na odsouhlasení Vojtou
+**Další krok:** Fáze 6 — Úkoly a úklid (schéma tasks/task_lists už existuje z Fáze 4, chybí šablony, opakování, přiřazování a UI)
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -31,7 +31,7 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Rozhodnutí, která čekají na Vojtu
 
-- [ ] Odsouhlasení Fáze 3 (nutriční systém)
+- [ ] Odsouhlasení Fází 3, 4 a 5
 - [ ] **Recepty k importu:** formát je hotový v docs/IMPORT-RECIPES.md včetně promptu pro AI — můžeš začít převádět PDF a nahrát je v Kuchařka → Import
 
 ---
@@ -100,19 +100,19 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Fáze 4 — Jídelníček a kalendář
 
-- [ ] 4.1 Schéma: meal_types (konfigurovatelné), meal_plan_entries, calendar_events
-- [ ] 4.2 Týdenní plán jídelníčku — recept i volný text, počet porcí, kdo připravuje
-- [ ] 4.3 Měsíční kalendář + týdenní detailní pohled
-- [ ] 4.4 Zobrazení úkolů s obdobím (pruh přes období) v kalendáři
-- [ ] 4.5 Příprava předem: recipe_prep_ahead → návrhy úkolů (přijmout/upravit/odmítnout, odmítnuté se neopakují)
+- [x] 4.1 Schéma: meal_types, meal_plan_entries, calendar_events + overrides, prep_task_suggestions, tasks (D-018); rrule knihovna s 16 testy — hotovo 2026-08-14
+- [x] 4.2 Týdenní plán — recept i volný text, více položek ve slotu, porce (předvyplněné z receptu), kdo připravuje — hotovo 2026-08-14
+- [x] 4.3 Měsíční i týdenní pohled kalendáře, opakování se rozbaluje při čtení (ověřeno: týdenní kroužek na 4 termínech) — hotovo 2026-08-14
+- [x] 4.4 Úkoly a nákupy s obdobím jako pruh nad mřížkou kalendáře — hotovo 2026-08-14
+- [x] 4.5 Návrhy přípravy předem — ověřeno: chléb na 15. 8. s 24h předstihem navrhl přípravu na 14. 8.; přijetí vytvořilo úkol viditelný v kalendáři, odmítnutý se už nenabídne — hotovo 2026-08-14
 
 ## Fáze 5 — Nákup
 
-- [ ] 5.1 Schéma: shopping_lists (období od–do), shopping_items, shopping_item_sources
-- [ ] 5.2 Ruční položky, import z receptu, import z jídelníčku
-- [ ] 5.3 Slučování podle food_id, jednoznačné převody jednotek, zobrazení zdrojů + testy
-- [ ] 5.4 Řazení podle kategorií obchodu
-- [ ] 5.5 Rychlé odškrtávání (optimistické UI)
+- [x] 5.1 Schéma: shopping_lists (období), shopping_items, shopping_item_sources — hotovo 2026-08-14
+- [x] 5.2 Ruční položky, import z receptu i z celého jídelníčku za období — hotovo 2026-08-14
+- [x] 5.3 Slučování podle food_id jen při jednoznačném převodu (D-019, 12 testů), zachování zdrojů při opakovaném importu (D-020) — ověřeno: mouka 500 g + 500 g → 1 kg se 2 zdroji — hotovo 2026-08-14
+- [x] 5.4 Řazení podle sekcí obchodu (dědí se stromem potravin, snapshot na položce) — hotovo 2026-08-14
+- [x] 5.5 Rychlé odškrtávání s optimistickým UI, 44px cíle, idempotentní endpoint (připraveno pro offline) — hotovo 2026-08-14
 
 ## Fáze 6 — Úkoly a úklid
 

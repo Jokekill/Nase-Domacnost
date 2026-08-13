@@ -4,6 +4,23 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-020 — Import do nákupu slučuje s nezaškrtnutými položkami a zachovává zdroje (2026-08-14)
+
+**Co:** Import receptu/jídelníčku do seznamu projde slučovačkou spolu s **nezaškrtnutými** položkami, které už na seznamu jsou; zaškrtnuté zůstanou nedotčené (rozdělaný nákup se nesmí přeházet). Původní `shopping_item_sources` se přenášejí do sloučeného řádku (`carriedSources`), takže attribuce se nikdy neztratí. Sekce obchodu se u položky odvodí z nejbližšího předka ve stromu potravin a uloží jako snapshot.
+**Proč:** Opakovaný import nesmí tvořit duplicity ani mazat historii („které recepty, který den" dle §6.5). Chybu s mizejícími zdroji odhalil integrační test, pokryto i jednotkovým testem.
+**Alternativy:** Slučovat i zaškrtnuté položky (rozbilo by rozdělaný nákup), nikdy neslučovat s existujícími (duplicity při každém importu).
+
+## D-019 — Slučování nákupu jen při jednoznačném převodu (2026-08-14)
+
+**Co:** `src/lib/domain/shopping-merge.ts` (12 testů). Slučuje se podle `food_id` (u volného textu podle normalizovaného názvu) a jen v rámci „kbelíku": hmotnost (g↔kg), objem (ml↔l), nebo shodná jednotka (ks, lžíce). Gramy a mililitry se **neslučují ani při známé hustotě** — uživatel kupuje jinou věc. Výsledek se zobrazí v přívětivé jednotce (1 800 g → 1,8 kg).
+**Proč:** Zadání §6.5. Převod g↔ml u nákupu mate (500 g mouky ≠ 500 ml mouky v obchodě).
+**Alternativy:** Slučovat vše přes gramy (skryje, co se má koupit), neslučovat vůbec (nesplňuje zadání).
+
+## D-018 — Tabulky úkolů vznikají už ve Fázi 4 (2026-08-14)
+
+**Co:** `tasks`, `task_lists`, `task_assignees` se zakládají v migraci Fáze 4, protože přijatý návrh „připravit předem" vytváří skutečný úkol (FK) a ten se hned zobrazí v kalendáři. Plná správa úkolů přijde ve Fázi 6.
+**Proč:** Stejná logika jako D-013 u potravin — čisté FK od začátku a přijetí návrhu má viditelný efekt.
+
 ## D-017 — Import receptů: párování bez diakritiky + náhled před uložením (2026-08-13)
 
 **Co:** Formát v docs/IMPORT-RECIPES.md (`formatVersion: 1`, JSON, včetně hotového promptu pro AI). Import je dvoufázový: náhled (kolik receptů, kolik ingrediencí se spárovalo, co ne, jaké kategorie/tagy vzniknou) → potvrzení. Párování potravin: přesná shoda normalizovaného názvu, jinak trigram `similarity > 0.55`; pod prahem zůstane volný text. Kategorie a tagy se hledají podle názvu, nenalezené vzniknou. BOM se před parsováním odstraňuje (Windows editory).
