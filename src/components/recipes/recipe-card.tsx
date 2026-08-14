@@ -17,7 +17,9 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
   return (
     <Link
       href={`/kucharka/${recipe.id}`}
-      className="group overflow-hidden rounded-card border border-border bg-surface shadow-card transition-shadow hover:shadow-pop"
+      // `block`: as a grid item this is implied, but the PDF selection mode
+      // wraps the card in a label where an inline link would collapse.
+      className="group block overflow-hidden rounded-card border border-border bg-surface shadow-card transition-shadow hover:shadow-pop"
     >
       <div className="aspect-[4/3] overflow-hidden bg-surface-warm">
         {recipe.mainPhotoKey ? (

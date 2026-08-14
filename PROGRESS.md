@@ -1,16 +1,16 @@
 # STAV PROJEKTU
 
 **Poslední aktualizace:** 2026-08-14
-**Aktuální fáze:** Fáze 8 — Sdílení (HOTOVÁ, ověřeno v prohlížeči)
+**Aktuální fáze:** Fáze 9 — PDF a zálohy (HOTOVÁ, ověřeno včetně obnovy do prázdné DB)
 **Právě rozpracováno:** nic — čeká se na odsouhlasení Vojtou
-**Další krok:** Fáze 9 — PDF kuchařka, automatické i ruční zálohy, export/import ZIP
+**Další krok:** Fáze 10 — offline režim a PWA (service worker, Dexie mirror, sync pull/push, konflikty)
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
 ## Jak projekt spustit
 
 ```bash
-docker compose up -d db
+docker compose up -d db backup   # backup = zálohovací sidecar (Fáze 9)
 pnpm install
 pnpm db:migrate
 pnpm db:seed        # volitelné: testovací účty (jen do prázdné DB)
@@ -27,6 +27,8 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 - [ ] SMTP pro reset hesla zatím chybí — odkaz se loguje do konzole serveru (záměr, viz ARCHITECTURE.md §1.3)
 - [ ] CI workflow (.github/workflows/ci.yml) je připravený, ale repo nemá GitHub remote — aktivuje se až po pushnutí
 - [ ] Skener čárových kódů potřebuje HTTPS (secure context) — na notebooku funguje jen přes localhost, na Pi to zajistí `tailscale serve`
+- [ ] Export ZIP obsahuje hashe hesel a osobní deníky všech členů — chránit soubor jako heslo (viz docs/EXPORT-FORMAT.md §3); lze vypnout přepínačem
+- [ ] Vizuální kontrola vygenerovaného PDF zatím na Vojtovi — tento stroj nemá rastrovač PDF (poppler), ověřeno jen strukturálně (vložené fonty, ToUnicode s diakritikou)
 - [ ] Sdílení mezi domácnostmi je připravené v datech i API, ale reálně tu je jedna domácnost (D-004). Kdyby vznikla druhá: editor sdíleného receptu vybírá potraviny ze svého vlastního katalogu — vyřešit až se to stane
 - [ ] Veřejné odkazy jsou vypnuté (`PUBLIC_SHARING_ENABLED=false`); zapnutí vyžaduje restart aplikace
 - [ ] Nutriční hodnoty v seedu jsou průměrné referenční hodnoty z veřejných tabulek — u konkrétních výrobků se mohou lišit, lze opravit v Nastavení → Potraviny
@@ -147,11 +149,11 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Fáze 9 — PDF a zálohy
 
-- [ ] 9.1 PDF kuchařka přes @react-pdf/renderer, fonty s diakritikou, bez nutričních hodnot
-- [ ] 9.2 Automatická denní záloha (pg_dump + uploads), retence 7/4/12
-- [ ] 9.3 Ruční záloha tlačítkem, stav poslední zálohy v Nastavení
-- [ ] 9.4 Export ZIP (data.json + photos/) + docs/EXPORT-FORMAT.md
-- [ ] 9.5 Import / obnovení s kontrolou integrity a náhledem
+- [x] 9.1 PDF kuchařka: výběr receptů v Kuchařce → obálka s obsahem + recept na stránku, fonty Fraunces/Inter jako TTF v `assets/fonts` (skript `scripts/build-pdf-fonts.mjs`), bez nutričních hodnot — hotovo 2026-08-14, D-024
+- [x] 9.2 Zálohovací sidecar v compose: pg_dump -Fc + tar fotek, retence 7/4/12, promoce nedělní/měsíční, denní údržba tokenů; ověřeno: dump obsahuje 45 tabulek a je čitelný pro pg_restore — hotovo 2026-08-14
+- [x] 9.3 `GET /api/backups/status` + `POST /api/backups/run` (admin) a sekce Zálohy v Nastavení se zvýrazněním starší než 48 h; ověřeno: tlačítko → .trigger → sidecar → nový záznam v backup_runs — hotovo 2026-08-14
+- [x] 9.4 Export ZIP (data.json + všechny varianty fotek), volitelně bez hesel/fotek, docs/EXPORT-FORMAT.md — hotovo 2026-08-14
+- [x] 9.5 Import dvoufázově s kontrolou integrity; ověřeno: obnova do prázdné DB (552 řádků, 12 fotek), opakovaný import nic nepřepsal, poškozené archivy odmítnuty — hotovo 2026-08-14
 
 ## Fáze 10 — Offline a PWA
 

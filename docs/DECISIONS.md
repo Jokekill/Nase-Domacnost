@@ -4,6 +4,15 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-024 — PDF fonty jako TTF v repu, zálohy smyčkou v sidecaru, import nikdy nepřepisuje (2026-08-14)
+
+**Co:** Tři rozhodnutí Fáze 9.
+- **PDF fonty:** `@react-pdf/renderer` (fontkit) neumí woff2, které jediné dodává `@fontsource`. `scripts/build-pdf-fonts.mjs` je jednorázově rozbalí do `assets/fonts/*.ttf` a ty jsou **v repu** — build i běh musí fungovat offline a diakritika v PDF nesmí záviset na stroji. Ověřeno rozborem hotového PDF: vložené podmnožiny Fraunces/Inter s korektním ToUnicode (č, š, ř). PDF je záměrně **bez nutričních hodnot** (tištěná stránka se nedá držet v souladu s katalogem potravin).
+- **Zálohy:** sidecar nepoužívá cron, ale prostou smyčku `sleep 60` (obraz postgresu cron nemá a instalovat ho kvůli tomu je víc mechaniky než ta smyčka). Tatáž smyčka hlídá i ruční spuštění přes soubor `.trigger`, který zapisuje `POST /api/backups/run` — aplikace sama `pg_dump` nespouští, v produkci k němu ani nemá binárky a na uploads volume přístup. Rotace běží **až po** úspěšné záloze.
+- **Import:** řádky s už existujícím `id` se **přeskakují**, nikdy nepřepisují — obnova do živé databáze nesmí umlčet novější data. Náhled běží bez dotyku databáze a kontroluje odkazy proti souboru i proti DB; existenci se testuje podle primárního klíče, a když tabulka žádný nemá (`household_members`), podle unikátního indexu — jinak náhled lhal o počtech u vazebních tabulek.
+**Proč:** Zadání §11 (PDF), §12 (zálohy a export). Ověřeno obnovou do prázdné databáze: 552 řádků a 12 fotek, poškozený archiv (rozbitý odkaz, chybějící fotka, cizí `formatVersion`, nevalidní ZIP) odmítnut ve všech čtyřech případech.
+**Alternativy:** Vestavěné fonty react-pdf (Helvetica nemá českou diakritiku), stahovat TTF za běhu (odporuje offline), cron v sidecaru (další balíček), import s přepisem (tichá ztráta dat).
+
 ## D-023 — Sdílení: rozhodovací matice jako čistá funkce, kopie je vždy nezávislá (2026-08-14)
 
 **Co:** Rozhodnutí „smí / nesmí" je čistá funkce `src/lib/domain/recipe-access.ts` (15 testů), DB vrstva (`src/lib/recipes/access.ts`) jen posbírá fakta (členství, `recipe_shares`, platnost veřejného tokenu). Pravidla: sdílení **rozšiřuje**, nikdy neomezuje (užší sdílení nesebere práva členu domácnosti); nedostupný recept se hlásí jako `not_found`, ne `forbidden` (cizí člověk se nedozví ani to, že existuje); `edit` sdílení nikdy nedává mazání ani další sdílení (to smí jen vlastník/správce domácnosti); veřejný odkaz je vždy jen ke čtení. Kopie receptu je **plná kopie včetně fotek na disku** — originál lze pak smazat, aniž se kopie rozbije; `copied_from_recipe_id` je jen provenience („Převzato od…"), kopie nedědí sdílení ani veřejné odkazy. Veřejná stránka posílá **whitelistovanou** projekci (`buildPublicRecipe`) — žádná ID, žádné nutriční hodnoty, žádná data domácnosti; fotky přes `?share=<token>` s krátkou cache, aby zneplatnění odkazu zabralo.

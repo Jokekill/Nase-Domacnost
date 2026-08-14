@@ -16,6 +16,33 @@ services:
       timeout: 5s
       retries: 5
 
+  # Backup sidecar (docs/ARCHITECTURE.md §4, D-009): independent of the app
+  # container's life, has access to the database and to the uploads.
+  backup:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: domacnost
+      POSTGRES_USER: domacnost
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-domacnost_dev}
+      BACKUP_HOUR: ${BACKUP_HOUR:-03}
+      # Retention 7 daily / 4 weekly / 12 monthly.
+      KEEP_DAILY: 7
+      KEEP_WEEKLY: 4
+      KEEP_MONTHLY: 12
+    volumes:
+      - ./docker/backup/backup.sh:/usr/local/bin/backup.sh:ro
+      - ./docker/backup/loop.sh:/usr/local/bin/loop.sh:ro
+      # Host paths, not named volumes: a home server's backups should be
+      # visible and copyable without docker (restore is step 11.6).
+      - ${UPLOADS_HOST_DIR:-./data/uploads}:/data/uploads:ro
+      - ${BACKUPS_HOST_DIR:-./data/backups}:/data/backups
+    entrypoint: ["bash", "/usr/local/bin/loop.sh"]
+
   # app service is added in Phase 11 (multi-arch image build for Raspberry Pi);
   # during development the app runs via `pnpm dev` against this db.
 

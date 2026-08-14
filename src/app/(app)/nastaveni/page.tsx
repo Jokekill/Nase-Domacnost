@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { BackupSection } from "@/components/settings/backup-section";
+import { TransferSection } from "@/components/settings/transfer-section";
 import { apiFetch } from "@/lib/api/client";
 
 type Me = {
@@ -189,6 +191,10 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+      <BackupSection isAdmin={me?.role === "admin"} />
+
+      {me?.role === "admin" && <TransferSection />}
 
       <section className={sectionClass}>
         <h2 className="mb-2 text-lg font-semibold">Účet</h2>
