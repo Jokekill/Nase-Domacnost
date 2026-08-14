@@ -4,6 +4,12 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-022 — Deník: snapshot počítaný na serveru, grafy bez knihovny (2026-08-14)
+
+**Co:** `diary_entries.nutrition` je JSONB snapshot **vypočtený na serveru** při zápisu (klientu se nevěří) a obsahuje i `incomplete` + `missing`. Záznam z receptu se škáluje počtem porcí konkrétního člověka. Čtení i zápis jsou vždy filtrované `user_id` — cizí deník nevidí ani admin. Přenos z jídelníčku je výhradně explicitní; položka jídelníčku bez receptu se uloží jako ruční záznam **bez hodnot** (nevymýšlíme čísla). Týdenní grafy jsou inline SVG, žádná grafová knihovna (bundle a výkon na Pi).
+**Proč:** Zadání §10.6 + §5.5. Ověřeno testem: po zdvojnásobení všech ingrediencí receptu zůstal starší záznam v deníku beze změny (1141 kJ).
+**Alternativy:** Počítat hodnoty při čtení z aktuálního receptu (porušuje neměnnost historie), recharts/chart.js (~50 kB navíc kvůli sedmi sloupcům).
+
 ## D-021 — Návrhy občasných úkolů: relativní naléhavost + strop na období (2026-08-14)
 
 **Co:** `src/lib/domain/task-suggestions.ts` (12 testů). Šablona je „po termínu", když `poslední splnění + interval_days <= dnes`; nikdy nesplněná se počítá od svého vzniku. Řazení podle **relativní** prodlevy (`daysOverdue / intervalDays`) — týden zpoždění u týdenního úkolu váží víc než u ročního. Šablona s už otevřeným úkolem se přeskočí. Nabízí se **nejvýš 3 najednou** (parametrizovatelné); zbytek počká na další období — to je vlastní rozprostření zátěže. Při shodě vyhrává delší interval, aby vzácné velké práce nezůstávaly poslední.

@@ -139,12 +139,12 @@ Stejné rozhraní má `/api/food-categories` (Fáze 3).
 
 | Metoda | Cesta | Popis |
 |---|---|---|
-| GET  | `/api/diary?from=&to=` | záznamy přihlášeného uživatele |
-| POST | `/api/diary/entries` | z receptu / potraviny / ručně — server spočítá a uloží snapshot |
-| PATCH/DELETE | `/api/diary/entries/:id` | úprava (přepočet snapshotu) / smazání |
-| POST | `/api/diary/from-meal-plan` | přenos vybraných položek jídelníčku (explicitní, nikdy automaticky) |
-| GET  | `/api/diary/summary?from=&to=` | denní součty, týdenní průměry |
-| GET/PUT/DELETE | `/api/diary/goals[...]` | osobní cíle (`nutrient_key`) |
+| GET  | `/api/diary?from=&to=` | záznamy přihlášeného uživatele (nikdy cizí) |
+| POST | `/api/diary/entries` | `sourceKind: "recipe" \| "food" \| "manual"` — server spočítá a uloží snapshot |
+| PATCH/DELETE | `/api/diary/entries/:id` | úprava metadat / soft delete (hodnoty snapshotu se nepřepočítávají) |
+| POST | `/api/diary/from-meal-plan` | `{entryIds[], servings?}` — explicitní přenos, nikdy automaticky |
+| GET  | `/api/diary/summary?from=&to=` | denní součty, průměry a cíle |
+| GET/PUT | `/api/diary/goals` | osobní cíle; `targetPerDay: null` cíl zruší |
 
 ## Sdílení (Fáze 8)
 

@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
 **Poslední aktualizace:** 2026-08-14
-**Aktuální fáze:** Fáze 6 — Úkoly a úklid (HOTOVÁ, ověřeno v prohlížeči)
+**Aktuální fáze:** Fáze 7 — Výživový deník (HOTOVÁ, ověřeno v prohlížeči)
 **Právě rozpracováno:** nic — čeká se na odsouhlasení Vojtou
-**Další krok:** Fáze 7 — Výživový deník (diary_entries se snapshotem hodnot, denní/týdenní přehledy, cíle)
+**Další krok:** Fáze 8 — Sdílení (oprávnění k receptům, sdílení konkrétním uživatelům, kopírování, veřejné odkazy za feature flagem)
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -127,12 +127,13 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Fáze 7 — Výživový deník
 
-- [ ] 7.1 Schéma: diary_entries se snapshot nutričních hodnot
-- [ ] 7.2 Zápis: z receptu (individuální porce), z potraviny, ruční hodnoty
-- [ ] 7.3 Přenos z jídelníčku jedním klikem (nikdy automaticky)
-- [ ] 7.4 Denní přehled (kJ, kcal, bílkoviny, sacharidy, cukry, vláknina, tuky)
-- [ ] 7.5 Týdenní průměry + grafy
-- [ ] 7.6 Volitelné osobní cíle a plnění
+- [x] 7.1 Schéma diary_entries se snapshotem (JSONB vč. incomplete/missing) + nutrition_goals; migrace 0009+0010 — hotovo 2026-08-14
+- [x] 7.2 Zápis z receptu (individuální porce), z potraviny, ruční hodnoty — ověřeno: Vojta 1 porce = 1141 kJ, Eliška 1,5 porce = 1712 kJ — hotovo 2026-08-14
+- [x] 7.3 Přenos z jídelníčku — výhradně explicitní výběr s možností upravit porce — hotovo 2026-08-14
+- [x] 7.4 Denní přehled (kJ + kcal, všech 8 veličin, upozornění na nekompletnost) — hotovo 2026-08-14
+- [x] 7.5 Týdenní graf (inline SVG, bez knihovny) + průměry na den z dní se záznamy — hotovo 2026-08-14
+- [x] 7.6 Volitelné osobní cíle pro libovolnou veličinu + ukazatele plnění — hotovo 2026-08-14
+- [x] 7.7 Ověřeno: deník je per uživatel (cizí nevidí ani admin) a snapshot je neměnný — po zdvojnásobení ingrediencí receptu zůstal záznam na 1141 kJ
 
 ## Fáze 8 — Sdílení
 
