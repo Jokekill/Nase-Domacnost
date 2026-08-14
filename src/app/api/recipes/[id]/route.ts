@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { apiHandler } from "@/lib/api/errors";
 import { requireUser } from "@/lib/auth/guards";
-import { requireRecipeAccess } from "@/lib/recipes/access";
+import {
+  getRecipePermissions,
+  requireRecipeAccess,
+} from "@/lib/recipes/access";
 import {
   getRecipeAggregate,
   softDeleteRecipe,
@@ -15,8 +18,12 @@ type Params = { params: Promise<{ id: string }> };
 export const GET = apiHandler(async (_req: NextRequest, { params }: Params) => {
   const user = await requireUser();
   const id = z.string().uuid().parse((await params).id);
-  await requireRecipeAccess(user, id, "view");
-  return NextResponse.json(await getRecipeAggregate(id));
+  const recipe = await requireRecipeAccess(user, id, "view");
+  const [aggregate, permissions] = await Promise.all([
+    getRecipeAggregate(id),
+    getRecipePermissions(user, recipe),
+  ]);
+  return NextResponse.json({ ...aggregate, permissions });
 });
 
 export const PATCH = apiHandler(async (req: NextRequest, { params }: Params) => {

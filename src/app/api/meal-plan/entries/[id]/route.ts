@@ -6,6 +6,7 @@ import { mealPlanEntries } from "@/db/schema";
 import { ApiError, apiHandler } from "@/lib/api/errors";
 import { requireHousehold } from "@/lib/auth/guards";
 import { refreshPrepSuggestions } from "@/lib/planning/meal-plan";
+import { requireRecipeAccess } from "@/lib/recipes/access";
 import { mealPlanEntryPatchSchema } from "@/lib/schemas/planning";
 
 type Params = { params: Promise<{ id: string }> };
@@ -14,6 +15,9 @@ export const PATCH = apiHandler(async (req: NextRequest, { params }: Params) => 
   const ctx = await requireHousehold();
   const id = z.string().uuid().parse((await params).id);
   const input = mealPlanEntryPatchSchema.parse(await req.json());
+  if (input.recipeId) {
+    await requireRecipeAccess(ctx.user, input.recipeId, "view");
+  }
 
   const updated = await db
     .update(mealPlanEntries)

@@ -4,11 +4,15 @@ import { mealPlanEntries } from "@/db/schema";
 import { apiHandler } from "@/lib/api/errors";
 import { requireHousehold } from "@/lib/auth/guards";
 import { refreshPrepSuggestions } from "@/lib/planning/meal-plan";
+import { requireRecipeAccess } from "@/lib/recipes/access";
 import { mealPlanEntrySchema } from "@/lib/schemas/planning";
 
 export const POST = apiHandler(async (req: NextRequest) => {
   const ctx = await requireHousehold();
   const input = mealPlanEntrySchema.parse(await req.json());
+  if (input.recipeId) {
+    await requireRecipeAccess(ctx.user, input.recipeId, "view");
+  }
 
   await db
     .insert(mealPlanEntries)

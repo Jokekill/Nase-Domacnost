@@ -22,6 +22,7 @@ import {
   recipeSteps,
   recipeTags,
   recipes,
+  users,
 } from "@/db/schema";
 import { ApiError } from "@/lib/api/errors";
 import type { RecipeListQuery, RecipeUpsert } from "@/lib/schemas/recipes";
@@ -33,10 +34,21 @@ type Actor = { userId: string; householdId: string };
 /* ------------------------------------------------------------------ */
 
 export async function listRecipes(actor: Actor, query: RecipeListQuery) {
+  // Visible = my household's non-private recipes (plus my own private ones),
+  // OR anything explicitly shared with me — a share widens, never narrows
+  // (docs/ARCHITECTURE.md §2.2).
+  const sharedWithMe = sql`EXISTS (
+    SELECT 1 FROM recipe_shares rs
+    WHERE rs.recipe_id = ${recipes.id} AND rs.user_id = ${actor.userId}
+      AND rs.deleted_at IS NULL
+  )`;
   const conditions: SQL[] = [
-    eq(recipes.householdId, actor.householdId),
     isNull(recipes.deletedAt),
-    sql`(${recipes.visibility} <> 'private' OR ${recipes.ownerId} = ${actor.userId})`,
+    sql`(
+      (${recipes.householdId} = ${actor.householdId}
+        AND (${recipes.visibility} <> 'private' OR ${recipes.ownerId} = ${actor.userId}))
+      OR ${sharedWithMe}
+    )`,
   ];
 
   if (query.q) {
@@ -136,6 +148,7 @@ export async function listRecipes(actor: Actor, query: RecipeListQuery) {
       visibility: recipes.visibility,
       ownerId: recipes.ownerId,
       createdAt: recipes.createdAt,
+      sharedWithMe: sql<boolean>`${sharedWithMe}`.as("shared_with_me"),
       // NB: keep "recipes"."id" fully qualified — an interpolated column in a
       // select-field subquery renders unqualified and would bind to rp.id.
       mainPhotoKey: sql<string | null>`(
@@ -252,6 +265,29 @@ export async function getRecipeAggregate(recipeId: string) {
         .limit(1),
     ]);
 
+  // Owner + provenance ("převzato od …"). The source recipe may since have
+  // been deleted or hidden — we only ever show its title and owner name.
+  const [ownerRow] = await db
+    .select({ displayName: users.displayName })
+    .from(users)
+    .where(eq(users.id, recipe.ownerId))
+    .limit(1);
+  const copiedFrom = recipe.copiedFromRecipeId
+    ? (
+        await db
+          .select({
+            id: recipes.id,
+            title: recipes.title,
+            ownerName: users.displayName,
+            deletedAt: recipes.deletedAt,
+          })
+          .from(recipes)
+          .innerJoin(users, eq(users.id, recipes.ownerId))
+          .where(eq(recipes.id, recipe.copiedFromRecipeId))
+          .limit(1)
+      )[0]
+    : undefined;
+
   // Per-food unit conversions for the foods actually used in this recipe.
   const usedFoodIds = [
     ...new Set(
@@ -271,6 +307,15 @@ export async function getRecipeAggregate(recipeId: string) {
 
   return {
     ...recipe,
+    ownerName: ownerRow?.displayName ?? null,
+    copiedFrom: copiedFrom
+      ? {
+          id: copiedFrom.id,
+          title: copiedFrom.title,
+          ownerName: copiedFrom.ownerName,
+          available: copiedFrom.deletedAt === null,
+        }
+      : null,
     groups,
     ingredients: ingredients.map((row) => ({
       ...row.ingredient,

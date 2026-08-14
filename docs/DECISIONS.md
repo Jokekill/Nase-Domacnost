@@ -4,6 +4,12 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-023 — Sdílení: rozhodovací matice jako čistá funkce, kopie je vždy nezávislá (2026-08-14)
+
+**Co:** Rozhodnutí „smí / nesmí" je čistá funkce `src/lib/domain/recipe-access.ts` (15 testů), DB vrstva (`src/lib/recipes/access.ts`) jen posbírá fakta (členství, `recipe_shares`, platnost veřejného tokenu). Pravidla: sdílení **rozšiřuje**, nikdy neomezuje (užší sdílení nesebere práva členu domácnosti); nedostupný recept se hlásí jako `not_found`, ne `forbidden` (cizí člověk se nedozví ani to, že existuje); `edit` sdílení nikdy nedává mazání ani další sdílení (to smí jen vlastník/správce domácnosti); veřejný odkaz je vždy jen ke čtení. Kopie receptu je **plná kopie včetně fotek na disku** — originál lze pak smazat, aniž se kopie rozbije; `copied_from_recipe_id` je jen provenience („Převzato od…"), kopie nedědí sdílení ani veřejné odkazy. Veřejná stránka posílá **whitelistovanou** projekci (`buildPublicRecipe`) — žádná ID, žádné nutriční hodnoty, žádná data domácnosti; fotky přes `?share=<token>` s krátkou cache, aby zneplatnění odkazu zabralo.
+**Proč:** Zadání §8. Rovina „recept" a rovina „data domácnosti" jsou nezávislé, tak musí být nezávisle i vynucené. Při implementaci se ukázalo, že import receptu do nákupu, zápis do deníku a vložení do jídelníčku braly `recipeId` z requestu bez kontroly — doplněno, jinak by stačilo uhodnout UUID.
+**Alternativy:** Rozhodovat přímo v SQL dotazu (netestovatelné bez DB), kopírovat fotky odkazem na tytéž soubory (smazání originálu by rozbilo kopie), vracet `forbidden` místo `not_found` (potvrzuje existenci receptu).
+
 ## D-022 — Deník: snapshot počítaný na serveru, grafy bez knihovny (2026-08-14)
 
 **Co:** `diary_entries.nutrition` je JSONB snapshot **vypočtený na serveru** při zápisu (klientu se nevěří) a obsahuje i `incomplete` + `missing`. Záznam z receptu se škáluje počtem porcí konkrétního člověka. Čtení i zápis jsou vždy filtrované `user_id` — cizí deník nevidí ani admin. Přenos z jídelníčku je výhradně explicitní; položka jídelníčku bez receptu se uloží jako ruční záznam **bez hodnot** (nevymýšlíme čísla). Týdenní grafy jsou inline SVG, žádná grafová knihovna (bundle a výkon na Pi).

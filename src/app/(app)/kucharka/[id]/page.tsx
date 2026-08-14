@@ -13,6 +13,7 @@ import type {
 import { formatScaled, scaleIngredient } from "@/lib/domain/servings";
 import { NutritionPanel } from "@/components/recipes/nutrition-panel";
 import { ReverseCalculator } from "@/components/recipes/reverse-calculator";
+import { SharePanel } from "@/components/recipes/share-panel";
 import {
   DIFFICULTY_LABELS,
   UNIT_LABELS,
@@ -37,6 +38,19 @@ type Detail = Omit<RecipeAggregate, "ingredients"> & {
   ingredients: DetailIngredient[];
   photos: Photo[];
   totalTimeMin: number | null;
+  ownerId: string;
+  ownerName: string | null;
+  copiedFrom: {
+    id: string;
+    title: string;
+    ownerName: string;
+    available: boolean;
+  } | null;
+  permissions: { canEdit: boolean; canDelete: boolean; canShare: boolean };
+};
+type Me = {
+  id: string;
+  features?: { publicSharing?: boolean };
 };
 
 export default function RecipeDetailPage() {
@@ -44,10 +58,16 @@ export default function RecipeDetailPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [servings, setServings] = useState<number | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const { data: recipe, isLoading } = useQuery({
     queryKey: ["recipe", id],
     queryFn: () => apiFetch<Detail>(`/api/recipes/${id}`),
+  });
+
+  const { data: me } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => apiFetch<Me>("/api/auth/me"),
   });
 
   const remove = useMutation({
@@ -55,6 +75,18 @@ export default function RecipeDetailPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["recipes"] });
       router.push("/kucharka");
+    },
+  });
+
+  const copy = useMutation({
+    mutationFn: () =>
+      apiFetch<{ id: string }>(`/api/recipes/${id}/copy`, {
+        method: "POST",
+        json: {},
+      }),
+    onSuccess: async (created) => {
+      await queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      router.push(`/kucharka/${created.id}`);
     },
   });
 
@@ -128,22 +160,86 @@ export default function RecipeDetailPage() {
           >
             🍳 Vařit
           </Link>
-          <Link
-            href={`/kucharka/${id}/upravit`}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11 inline-flex items-center"
-          >
-            ✏️ Upravit
-          </Link>
+          {recipe.permissions?.canEdit && (
+            <Link
+              href={`/kucharka/${id}/upravit`}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11 inline-flex items-center"
+            >
+              ✏️ Upravit
+            </Link>
+          )}
           <button
-            onClick={() => {
-              if (confirm("Opravdu smazat tento recept?")) remove.mutate();
-            }}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-destructive hover:bg-surface-warm min-h-11"
+            onClick={() => copy.mutate()}
+            disabled={copy.isPending}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
+            title="Vytvoří vlastní kopii receptu, kterou můžeš upravovat"
           >
-            Smazat
+            {copy.isPending ? "Kopíruji…" : "⧉ Kopírovat"}
           </button>
+          {recipe.permissions?.canDelete && (
+            <button
+              onClick={() => {
+                if (confirm("Opravdu smazat tento recept?")) remove.mutate();
+              }}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-destructive hover:bg-surface-warm min-h-11"
+            >
+              Smazat
+            </button>
+          )}
+          {recipe.permissions?.canShare && (
+            <button
+              onClick={() => setShareOpen((v) => !v)}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
+            >
+              🔗 Sdílet
+            </button>
+          )}
         </div>
       </div>
+
+      {recipe.permissions?.canShare && (
+        <SharePanel
+          recipeId={id}
+          ownerId={recipe.ownerId}
+          publicSharingEnabled={me?.features?.publicSharing ?? false}
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
+
+      {copy.isError && (
+        <p className="mb-3 rounded-lg bg-destructive/10 p-2.5 text-sm text-destructive">
+          {(copy.error as Error).message}
+        </p>
+      )}
+
+      {me && recipe.ownerId !== me.id && (
+        <p className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm">
+          {recipe.permissions?.canEdit
+            ? `Recept sdílí ${recipe.ownerName ?? "někdo jiný"} — můžeš ho upravovat.`
+            : `Recept sdílí ${recipe.ownerName ?? "někdo jiný"} — máš ho jen ke čtení. Chceš-li si ho upravit, udělej si kopii.`}
+        </p>
+      )}
+
+      {recipe.copiedFrom && (
+        <p className="mb-3 text-sm text-muted-foreground">
+          Převzato od {recipe.copiedFrom.ownerName} — „{recipe.copiedFrom.title}
+          &ldquo;
+          {recipe.copiedFrom.available && (
+            <>
+              {" "}
+              (
+              <Link
+                href={`/kucharka/${recipe.copiedFrom.id}`}
+                className="text-primary hover:underline"
+              >
+                originál
+              </Link>
+              )
+            </>
+          )}
+        </p>
+      )}
 
       {mainPhoto && (
         // Fixed aspect ratio reserves the space before the image loads —

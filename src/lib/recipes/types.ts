@@ -28,6 +28,8 @@ export type RecipeListItem = {
   totalTimeMin: number | null;
   difficulty: Difficulty | null;
   mainPhotoKey: string | null;
+  /** True when it is visible to me through a share, not through my household. */
+  sharedWithMe?: boolean;
 };
 
 export type RecipeListResponse = {

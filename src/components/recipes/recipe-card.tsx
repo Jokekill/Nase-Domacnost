@@ -37,6 +37,14 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
       <div className="p-3">
         <h3 className="font-display text-lg font-semibold leading-snug">
           {recipe.title}
+          {recipe.sharedWithMe && (
+            <span
+              className="ml-1.5 align-middle text-sm text-muted-foreground"
+              title="Recept sdílený tobě"
+            >
+              🔗
+            </span>
+          )}
         </h3>
         {meta && (
           <p className="mt-0.5 text-sm text-muted-foreground">{meta}</p>

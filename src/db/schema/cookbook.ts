@@ -9,6 +9,7 @@ import {
   primaryKey,
   text,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { syncColumns } from "./helpers";
 import { households, users } from "./auth";
@@ -55,7 +56,11 @@ export const recipes = pgTable(
     visibility: text("visibility", { enum: VISIBILITIES })
       .notNull()
       .default("household"),
-    copiedFromRecipeId: uuid("copied_from_recipe_id"),
+    // Self-reference: "převzato od …" survives even if the source is later
+    // made private; it is deliberately NOT cascading.
+    copiedFromRecipeId: uuid("copied_from_recipe_id").references(
+      (): AnyPgColumn => recipes.id,
+    ),
     searchNormalized: text("search_normalized").generatedAlwaysAs(
       (): ReturnType<typeof sql> =>
         sql`immutable_unaccent(lower(title || ' ' || coalesce(intro, '')))`,

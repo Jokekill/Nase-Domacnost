@@ -150,9 +150,18 @@ Stejné rozhraní má `/api/food-categories` (Fáze 3).
 
 | Metoda | Cesta | Popis |
 |---|---|---|
-| GET/POST/DELETE | `/api/recipes/:id/shares[...]` | sdílení konkrétním uživatelům (view/edit) |
-| POST/DELETE | `/api/recipes/:id/public-links[...]` | veřejné odkazy (za flagem) |
+| GET/POST | `/api/recipes/:id/shares` | seznam sdílení / nasdílení (`userId` nebo `email` + `permission`) |
+| DELETE | `/api/recipes/:id/shares/:userId` | zrušení sdílení |
+| POST | `/api/recipes/:id/copy` | kopie receptu vč. fotek do mé domácnosti |
+| GET/POST | `/api/recipes/:id/public-links` | veřejné odkazy (za flagem); token se vrací **jen při vytvoření** |
+| DELETE | `/api/recipes/:id/public-links/:linkId` | zneplatnění odkazu (funguje i při vypnutém flagu) |
 | GET  | `/api/share/:token` | veřejný náhled receptu (bez session, za flagem) |
+| GET  | `/api/files/<key>?share=<token>` | fotka sdíleného receptu pro anonyma s odkazem |
+
+Nastavovat sdílení smí jen vlastník receptu nebo správce domácnosti — držitel
+`edit` sdílení recept upravit může, ale dál sdílet ne. `GET /api/recipes/:id`
+vrací navíc `permissions` (`canEdit`/`canDelete`/`canShare`), `ownerName`
+a `copiedFrom`, aby UI nenabízelo, co API stejně odmítne.
 
 ## PDF, zálohy, export (Fáze 9)
 

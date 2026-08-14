@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
 **Poslední aktualizace:** 2026-08-14
-**Aktuální fáze:** Fáze 7 — Výživový deník (HOTOVÁ, ověřeno v prohlížeči)
+**Aktuální fáze:** Fáze 8 — Sdílení (HOTOVÁ, ověřeno v prohlížeči)
 **Právě rozpracováno:** nic — čeká se na odsouhlasení Vojtou
-**Další krok:** Fáze 8 — Sdílení (oprávnění k receptům, sdílení konkrétním uživatelům, kopírování, veřejné odkazy za feature flagem)
+**Další krok:** Fáze 9 — PDF kuchařka, automatické i ruční zálohy, export/import ZIP
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -27,11 +27,13 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 - [ ] SMTP pro reset hesla zatím chybí — odkaz se loguje do konzole serveru (záměr, viz ARCHITECTURE.md §1.3)
 - [ ] CI workflow (.github/workflows/ci.yml) je připravený, ale repo nemá GitHub remote — aktivuje se až po pushnutí
 - [ ] Skener čárových kódů potřebuje HTTPS (secure context) — na notebooku funguje jen přes localhost, na Pi to zajistí `tailscale serve`
+- [ ] Sdílení mezi domácnostmi je připravené v datech i API, ale reálně tu je jedna domácnost (D-004). Kdyby vznikla druhá: editor sdíleného receptu vybírá potraviny ze svého vlastního katalogu — vyřešit až se to stane
+- [ ] Veřejné odkazy jsou vypnuté (`PUBLIC_SHARING_ENABLED=false`); zapnutí vyžaduje restart aplikace
 - [ ] Nutriční hodnoty v seedu jsou průměrné referenční hodnoty z veřejných tabulek — u konkrétních výrobků se mohou lišit, lze opravit v Nastavení → Potraviny
 
 ## Rozhodnutí, která čekají na Vojtu
 
-- [ ] Odsouhlasení Fází 3, 4 a 5
+- [ ] Odsouhlasení Fází 3, 4, 5, 6, 7 a 8
 - [ ] **Recepty k importu:** formát je hotový v docs/IMPORT-RECIPES.md včetně promptu pro AI — můžeš začít převádět PDF a nahrát je v Kuchařka → Import
 
 ---
@@ -137,11 +139,11 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Fáze 8 — Sdílení
 
-- [ ] 8.1 Schéma: recipe_shares, recipe_public_links, recipes.visibility, copied_from_recipe_id
-- [ ] 8.2 Vynucení oprávnění na úrovni API (recept vs. data domácnosti)
-- [ ] 8.3 Sdílení konkrétním uživatelům (view/edit)
-- [ ] 8.4 Kopírování receptu včetně fotek, „převzato od …"
-- [ ] 8.5 Veřejné odkazy /share/<token> za feature flagem PUBLIC_SHARING_ENABLED
+- [x] 8.1 Schéma recipe_shares + recipe_public_links (migrace 0011+0012), FK a CHECK u copied_from_recipe_id, partial unique index na živé sdílení — hotovo 2026-08-14
+- [x] 8.2 Matice oprávnění jako čistá funkce (15 testů) + vynucení v API; doplněna chybějící kontrola u importu do nákupu, zápisu do deníku a jídelníčku (D-023) — hotovo 2026-08-14
+- [x] 8.3 Sdílení konkrétním uživatelům (view/edit) — panel na detailu receptu, rychlá volba členů i sdílení podle e-mailu; ověřeno: Eliška viděla soukromý recept jen ke čtení (PATCH/DELETE 403), po povýšení na `edit` úprava prošla, mazání a další sdílení ne — hotovo 2026-08-14
+- [x] 8.4 Kopírování receptu včetně fotek, „Převzato od …" — ověřeno: kopie má vlastní soubory na disku a vlastní vlastníky, odkaz na originál zůstává — hotovo 2026-08-14
+- [x] 8.5 Veřejné odkazy /share/<token> za flagem PUBLIC_SHARING_ENABLED — stránka bez session, whitelistovaná projekce bez dat domácnosti, fotky přes `?share=`; ověřeno: vypnutý flag odmítá (403/404), zneplatnění odkazu zabralo na API, fotce i stránce — hotovo 2026-08-14
 
 ## Fáze 9 — PDF a zálohy
 

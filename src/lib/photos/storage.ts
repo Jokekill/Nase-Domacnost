@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp, { type Metadata } from "sharp";
 import { uuidv7 } from "uuidv7";
@@ -97,6 +97,46 @@ export function photoFilePath(
   const safe = storageKey.replace(/\.\./g, "");
   const suffix = variant === "orig" ? `_orig.${originalExt}` : `_${variant}.webp`;
   return path.join(uploadsDir(), ...safe.split("/")) + suffix;
+}
+
+/**
+ * Physically duplicates all variants of a photo into the target household's
+ * folder — a copied recipe must not depend on the original's files, which its
+ * owner may delete at any time (docs/ARCHITECTURE.md §2.2).
+ */
+export async function copyPhotoFiles(
+  sourceKey: string,
+  originalExt: string,
+  targetHouseholdId: string,
+): Promise<string> {
+  const now = new Date();
+  const yyyy = String(now.getFullYear());
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const id = uuidv7();
+  const dir = path.join(uploadsDir(), targetHouseholdId, yyyy, mm);
+  await mkdir(dir, { recursive: true });
+  const targetKey = `${targetHouseholdId}/${yyyy}/${mm}/${id}`;
+
+  const variants: PhotoVariant[] = ["orig", "thumb", "card", "full"];
+  const written: string[] = [];
+  try {
+    for (const variant of variants) {
+      const from = photoFilePath(sourceKey, variant, originalExt);
+      const to = photoFilePath(targetKey, variant, originalExt);
+      try {
+        await copyFile(from, to);
+        written.push(to);
+      } catch (err) {
+        // A missing variant is survivable (older upload, interrupted write);
+        // a missing original is not.
+        if (variant === "orig") throw err;
+      }
+    }
+  } catch (err) {
+    await Promise.allSettled(written.map((p) => rm(p, { force: true })));
+    throw err;
+  }
+  return targetKey;
 }
 
 export async function deletePhotoFiles(

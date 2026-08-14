@@ -5,6 +5,9 @@ const PUBLIC_PATHS = [
   "/registrace",
   "/zapomenute-heslo",
   "/reset-hesla",
+  // Public recipe links (§8.5) — the token itself is the authorization,
+  // the page still checks the feature flag and the token server-side.
+  "/share/",
 ];
 
 /**

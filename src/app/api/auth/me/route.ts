@@ -5,6 +5,7 @@ import { households, users } from "@/db/schema";
 import { ApiError, apiHandler } from "@/lib/api/errors";
 import { requireHousehold, requireUser } from "@/lib/auth/guards";
 import { hashPassword, verifyPassword } from "@/lib/auth/passwords";
+import { publicSharingEnabled } from "@/lib/recipes/access";
 import { updateMeSchema } from "@/lib/schemas/auth";
 
 export const GET = apiHandler(async () => {
@@ -21,6 +22,8 @@ export const GET = apiHandler(async () => {
     preferences: ctx.user.preferences,
     role: ctx.role,
     household,
+    // Server-side flags the UI needs to know about (§8.5).
+    features: { publicSharing: publicSharingEnabled() },
   });
 });
 
