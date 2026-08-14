@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useDialog } from "@/components/dialog";
 import { apiFetch } from "@/lib/api/client";
 import { UNITS } from "@/db/schema";
 import {
@@ -33,6 +34,7 @@ export function AddEntryDialog({
   onClose: () => void;
   onSave: (payload: Record<string, unknown>) => void;
 }) {
+  const dialog = useDialog(onClose);
   const [mode, setMode] = useState<Mode>("recipe");
   const [entryDate, setEntryDate] = useState(date);
   const [mealTypeId, setMealTypeId] = useState<string>("");
@@ -114,10 +116,18 @@ export function AddEntryDialog({
   const payload = buildPayload();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
-      <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-card bg-surface p-4 shadow-pop sm:rounded-card">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+      {...dialog.backdropProps}
+    >
+      <div
+        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-card bg-surface p-4 shadow-pop sm:rounded-card"
+        {...dialog.panelProps}
+      >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Přidat do deníku</h2>
+          <h2 id={dialog.titleId} className="text-lg font-semibold">
+            Přidat do deníku
+          </h2>
           <button
             onClick={onClose}
             className="rounded-lg border border-border px-3 py-1.5 text-sm min-h-11"

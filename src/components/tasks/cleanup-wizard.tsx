@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useDialog } from "@/components/dialog";
 import { apiFetch } from "@/lib/api/client";
 import { addDays, formatRange, startOfWeek, toDateKey } from "@/lib/dates";
 import { formatInterval } from "@/lib/domain/task-suggestions";
@@ -83,13 +84,22 @@ export function CleanupWizard({
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
 
+  const dialog = useDialog(onClose);
   const totalPicked = selected.length + customNames.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
-      <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-card bg-surface p-4 shadow-pop sm:rounded-card">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+      {...dialog.backdropProps}
+    >
+      <div
+        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-card bg-surface p-4 shadow-pop sm:rounded-card"
+        {...dialog.panelProps}
+      >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Nový úklid</h2>
+          <h2 id={dialog.titleId} className="text-lg font-semibold">
+            Nový úklid
+          </h2>
           <button
             onClick={onClose}
             className="rounded-lg border border-border px-3 py-1.5 text-sm min-h-11"
@@ -236,7 +246,8 @@ export function CleanupWizard({
           </button>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Období: {formatRange(
+          Období:{" "}
+          {formatRange(
             new Date(`${periodStart}T00:00:00`),
             new Date(`${periodEnd}T00:00:00`),
           )}

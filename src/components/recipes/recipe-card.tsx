@@ -37,7 +37,8 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
         )}
       </div>
       <div className="p-3">
-        <h3 className="font-display text-lg font-semibold leading-snug">
+        {/* h2: the cards sit directly under the page h1 (§11.2). */}
+        <h2 className="font-display text-lg font-semibold leading-snug">
           {recipe.title}
           {recipe.sharedWithMe && (
             <span
@@ -47,10 +48,8 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
               🔗
             </span>
           )}
-        </h3>
-        {meta && (
-          <p className="mt-0.5 text-sm text-muted-foreground">{meta}</p>
-        )}
+        </h2>
+        {meta && <p className="mt-0.5 text-sm text-muted-foreground">{meta}</p>}
       </div>
     </Link>
   );

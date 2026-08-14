@@ -39,3 +39,6 @@ tsconfig.tsbuildinfo
 .next-prod/
 public/sw.js
 public/sw.js.map
+e2e/.auth/
+test-results/
+playwright-report/

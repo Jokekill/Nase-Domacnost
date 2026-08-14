@@ -34,7 +34,12 @@ export async function pullChanges(
     const [older] = await db
       .select({ seq: changeLog.seq })
       .from(changeLog)
-      .where(and(eq(changeLog.householdId, ctx.householdId), lte(changeLog.seq, cursor)))
+      .where(
+        and(
+          eq(changeLog.householdId, ctx.householdId),
+          lte(changeLog.seq, cursor),
+        ),
+      )
       .limit(1);
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -58,7 +63,10 @@ export async function pullChanges(
     })
     .from(changeLog)
     .where(
-      and(eq(changeLog.householdId, ctx.householdId), gt(changeLog.seq, cursor)),
+      and(
+        eq(changeLog.householdId, ctx.householdId),
+        gt(changeLog.seq, cursor),
+      ),
     )
     .orderBy(asc(changeLog.seq))
     .limit(limit + 1);
@@ -69,7 +77,10 @@ export async function pullChanges(
 
   // Collapse repeated changes to the same row: the client gets current state,
   // so the last op per row is all that matters.
-  const wanted = new Map<string, { table: string; op: string; ids: string[] }>();
+  const wanted = new Map<
+    string,
+    { table: string; op: string; ids: string[] }
+  >();
   const lastOpPerRow = new Map<string, string>();
   for (const entry of page) {
     if (!isSyncEntity(entry.tableName)) continue;
@@ -104,12 +115,17 @@ export async function bootstrapSnapshot(
     .from(changeLog)
     .where(eq(changeLog.householdId, ctx.householdId));
 
-  const tables: Record<string, Row[]> = {};
-  for (const [name, entity] of Object.entries(SYNC_ENTITIES)) {
-    const rows = await loadRows(entity, ctx, null, name);
-    tables[name] = rows.map(serialize);
-  }
-  return { tables, cursor: seq ?? 0 };
+  // Twenty independent SELECTs — run them together. Sequentially this is the
+  // slowest endpoint in the app (~220 ms here, and a Pi is no laptop), and it
+  // is what a new device waits for before it can show anything.
+  const loaded = await Promise.all(
+    Object.entries(SYNC_ENTITIES).map(async ([name, entity]) => {
+      const rows = await loadRows(entity, ctx, null, name);
+      return [name, rows.map(serialize)] as const;
+    }),
+  );
+
+  return { tables: Object.fromEntries(loaded), cursor: seq ?? 0 };
 }
 
 async function loadRows(

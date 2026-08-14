@@ -213,7 +213,10 @@ export default function DiaryPage() {
       )}
 
       {message && (
-        <p className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm">
+        <p
+          role="status"
+          className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm"
+        >
           {message}
         </p>
       )}
@@ -405,6 +408,7 @@ export default function DiaryPage() {
           <select
             value={chartNutrient}
             onChange={(e) => setChartNutrient(e.target.value as NutrientKey)}
+            aria-label="Veličina v týdenním grafu"
             className="rounded-lg border border-border bg-background px-2 py-2 text-sm min-h-11"
           >
             {NUTRIENT_KEYS.map((key) => (

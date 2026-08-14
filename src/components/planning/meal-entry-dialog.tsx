@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useDialog } from "@/components/dialog";
 import { apiFetch } from "@/lib/api/client";
 import type { RecipeListResponse } from "@/lib/recipes/types";
 
@@ -53,16 +54,22 @@ export function MealEntryDialog({
       ),
   });
 
-  const set = <K extends keyof MealEntryDraft>(
-    key: K,
-    v: MealEntryDraft[K],
-  ) => setValue((prev) => ({ ...prev, [key]: v }));
+  const dialog = useDialog(onClose);
+
+  const set = <K extends keyof MealEntryDraft>(key: K, v: MealEntryDraft[K]) =>
+    setValue((prev) => ({ ...prev, [key]: v }));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-      <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-card bg-surface p-4 shadow-pop sm:rounded-card">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+      {...dialog.backdropProps}
+    >
+      <div
+        className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-card bg-surface p-4 shadow-pop sm:rounded-card"
+        {...dialog.panelProps}
+      >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
+          <h2 id={dialog.titleId} className="text-lg font-semibold">
             {draft.id ? "Upravit jídlo" : "Přidat jídlo"}
           </h2>
           <button

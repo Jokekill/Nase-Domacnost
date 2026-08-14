@@ -7,7 +7,10 @@ type Preview = {
   formatVersion: number;
   exportedAt: string | null;
   includesCredentials: boolean;
-  counts: Record<string, { inFile: number; existing: number; toInsert: number }>;
+  counts: Record<
+    string,
+    { inFile: number; existing: number; toInsert: number }
+  >;
   photos: { inFile: number; missing: string[] };
   problems: string[];
   canApply: boolean;
@@ -98,8 +101,8 @@ export function TransferSection() {
 
       <div className="mb-4">
         <p className="mb-2 text-sm text-muted-foreground">
-          ZIP s <code>data.json</code> a fotkami — čitelný formát, popsaný
-          v docs/EXPORT-FORMAT.md.
+          ZIP s <code>data.json</code> a fotkami — čitelný formát, popsaný v
+          docs/EXPORT-FORMAT.md.
         </p>
         <label className="mb-1 flex items-center gap-2 text-sm">
           <input
@@ -121,15 +124,11 @@ export function TransferSection() {
         </label>
         {withCredentials && (
           <p className="mb-2 text-sm text-muted-foreground">
-            ⚠️ Soubor pak obsahuje hashe hesel všech členů — chraň ho jako
-            heslo samotné.
+            ⚠️ Soubor pak obsahuje hashe hesel všech členů — chraň ho jako heslo
+            samotné.
           </p>
         )}
-        <button
-          onClick={exportZip}
-          disabled={busy !== null}
-          className={button}
-        >
+        <button onClick={exportZip} disabled={busy !== null} className={button}>
           {busy === "export" ? "Připravuji…" : "⬇︎ Stáhnout export"}
         </button>
       </div>
@@ -142,6 +141,7 @@ export function TransferSection() {
         </p>
         <input
           ref={fileRef}
+          aria-label="Soubor zálohy ZIP"
           type="file"
           accept=".zip,application/zip"
           onChange={(e) => {

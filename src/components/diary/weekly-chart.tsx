@@ -1,7 +1,11 @@
 "use client";
 
 import { WEEKDAY_SHORT } from "@/lib/dates";
-import { formatNutrient, type NutrientKey } from "@/lib/domain/nutrition";
+import {
+  NUTRIENT_LABELS,
+  formatNutrient,
+  type NutrientKey,
+} from "@/lib/domain/nutrition";
 
 type DayTotals = {
   date: string;
@@ -54,7 +58,12 @@ export function WeeklyChart({
         preserveAspectRatio="none"
         className="h-36 w-full"
         role="img"
-        aria-label={`Graf: ${nutrient} po dnech`}
+        aria-label={`Graf ${NUTRIENT_LABELS[nutrient]} po dnech: ${values
+          .map(
+            (v) =>
+              `${WEEKDAY_SHORT[(v.date.getDay() + 6) % 7]} ${v.value == null ? "bez záznamu" : `${formatNutrient(nutrient, v.value)} ${unit}`}`,
+          )
+          .join(", ")}`}
       >
         {goal != null && goal > 0 && (
           <line
@@ -79,9 +88,7 @@ export function WeeklyChart({
               width={barWidth - barGap / 2}
               height={barHeight}
               rx="1"
-              fill={
-                entry.incomplete ? "var(--warning)" : "var(--primary)"
-              }
+              fill={entry.incomplete ? "var(--warning)" : "var(--primary)"}
               opacity={entry.value != null ? 1 : 0.15}
             />
           );
@@ -92,7 +99,9 @@ export function WeeklyChart({
           <div key={index}>
             <div>{WEEKDAY_SHORT[(entry.date.getDay() + 6) % 7]}</div>
             <div className="font-medium text-foreground">
-              {entry.value != null ? formatNutrient(nutrient, entry.value) : "—"}
+              {entry.value != null
+                ? formatNutrient(nutrient, entry.value)
+                : "—"}
             </div>
           </div>
         ))}

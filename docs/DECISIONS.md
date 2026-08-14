@@ -4,6 +4,18 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-027 — Doladění a nasazení: obraz bez zdrojáků, migrace vlastní službou, smoke testy se přihlašují jednou (2026-08-14)
+
+**Co:** Rozhodnutí Fáze 11.
+- **Výkon se měří jen na produkčním buildu.** Dev server má ~550 ms fixní režie na požadavek, takže čísla z něj nic neříkají. Na produkčním buildu jsou všechny endpointy 35–60 ms; jediná výjimka byl `sync/pull?bootstrap=true` (220 ms, dvacet sekvenčních SELECTů), teď jedou paralelně → 129 ms. Indexy se nedoplňovaly: tabulky, které rostou (`change_log`, `sync_applied_ops`, `shopping_items`, `task_completion_history`), je mají a data domácnosti jsou v řádu tisíců řádků.
+- **Přístupnost: jeden hook, ne komponenta.** `useDialog` (role, `aria-modal`, Escape, fokus dovnitř / past / návrat na spouštěč) používají všechny čtyři modály; wrapper komponenta by je nutil vypadat stejně, přitom na telefonu jsou to spodní listy a na desktopu karty. Doplněn odkaz „Přeskočit na obsah" (na desktopu je před obsahem devět odkazů) a chybějící popisky. Kontrast ověřen výpočtem WCAG poměrů na všech hlavních obrazovkách ve světlém i tmavém režimu — bez nálezu.
+- **Testy zrcadla nad skutečným IndexedDB** (`fake-indexeddb`), ne nad zesměšněnou vrstvou: chyby v offline čtení jsou chyby v dotazech a řazení, a ty by mock schoval (21 testů).
+- **Playwright se přihlašuje jednou** a session předává přes `storageState`. Přihlášení v každém testu narazí na vlastní rate limit (10 pokusů / 15 minut) a suita začne padat na vlastní obraně — což se při psaní opravdu stalo. Smoke testy jedou v Chrome i na Pixelu, protože telefon je primární zařízení.
+- **Obraz neobsahuje zdrojáky ani migrační skript v TS.** Next standalone si drizzle a postgres zabalí do svých chunků, takže migrace by z `node_modules` nic nenašla; runner je proto jednosouborový esbuild bundle a **migrace běží jako samostatná jednorázová služba** (`docker compose run --rm migrate`), nikdy ne při startu aplikace — dva kontejnery by si mohly skočit do řeči. Základ je Debian slim, ne Alpine: sharp má předkompilované libvips pro glibc a ladit zpracování fotek na Pi je to poslední, co kdo chce.
+- **`pnpm install` v obrazu jede s `--config.minimumReleaseAge=0`**, protože instaluje přesně to, co je v zamčeném lockfile — jinak by obraz nešel postavit den po aktualizaci závislostí. Doplněn `packageManager` (jinak corepack v obrazu vzal jinou verzi pnpm než vývojový stroj) a `pnpm.onlyBuiltDependencies` pro sharp/esbuild.
+**Proč:** Zadání §13 a §14. Ověřeno: produkční obraz projde celou smoke suitou (7/7), `docker compose run --rm migrate` aplikuje schéma z obrazu, obnova `pg_dump` zálohy do prázdné databáze dá 45 tabulek a aplikace nad ní běží (přihlášení i výpis receptů), archiv fotek obsahuje 19 položek.
+**Alternativy:** Migrace při startu aplikace (závod dvou kontejnerů), tsx a zdrojáky v runtime obrazu (zbytečná plocha), Alpine (sharp bez prebuildů pro musl), povolit `minimumReleaseAge=0` globálně v `.npmrc` (oslabí ochranu i při běžné instalaci).
+
 ## D-026 — Offline čtení: obrazovky sahají do zrcadla samy, TanStack Query v režimu `offlineFirst` (2026-08-14)
 
 **Co:** Dokončení Fáze 10. Každá obrazovka, která má fungovat bez sítě, má ve svém `queryFn` `try { API } catch { zrcadlo }` — žádná globální „offline vrstva". Data ze zrcadla nesou `offline: true`, podle toho se ukáže pruh „Offline — ukazuji poslední staženou kopii" a **schovají se akce, které bez serveru nemůžou projít** (úpravy a kopírování receptu, zakládání seznamu, přidávání položek, nový úklid, přiřazování, zápis do deníku). Raději méně tlačítek než tlačítka, která spadnou.

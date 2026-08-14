@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { uuidv7 } from "uuidv7";
+import { useDialog } from "@/components/dialog";
 import { apiFetch } from "@/lib/api/client";
 import {
   MONTH_NAMES,
@@ -85,7 +86,9 @@ export default function CalendarPage() {
   const { data } = useQuery({
     queryKey: ["calendar", from, to],
     queryFn: () =>
-      apiFetch<{ items: CalendarItem[] }>(`/api/calendar?from=${from}&to=${to}`),
+      apiFetch<{ items: CalendarItem[] }>(
+        `/api/calendar?from=${from}&to=${to}`,
+      ),
   });
 
   const items = data?.items ?? [];
@@ -286,8 +289,8 @@ export default function CalendarPage() {
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        🍽 jídelníček · 📅 událost · ✅ úkol · 🛒 nákup. Úkoly a nákupy
-        s obdobím se zobrazují jako pruh nad kalendářem.
+        🍽 jídelníček · 📅 událost · ✅ úkol · 🛒 nákup. Úkoly a nákupy s obdobím
+        se zobrazují jako pruh nad kalendářem.
       </p>
 
       {showEventForm && (
@@ -335,13 +338,23 @@ function EventForm({
     onError: (err) => setError(err.message),
   });
 
+  const dialog = useDialog(onClose);
+
   const input =
     "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
-      <div className="w-full max-w-md rounded-t-card bg-surface p-4 shadow-pop sm:rounded-card">
-        <h2 className="mb-3 text-lg font-semibold">Nová událost</h2>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+      {...dialog.backdropProps}
+    >
+      <div
+        className="w-full max-w-md rounded-t-card bg-surface p-4 shadow-pop sm:rounded-card"
+        {...dialog.panelProps}
+      >
+        <h2 id={dialog.titleId} className="mb-3 text-lg font-semibold">
+          Nová událost
+        </h2>
         <div className="space-y-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium">Název</span>

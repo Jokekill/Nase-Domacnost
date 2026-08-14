@@ -33,6 +33,15 @@ export function AppShell({
 
   return (
     <div className="min-h-dvh pb-20 md:pb-0">
+      {/* Nine links stand between the top of the page and the content on the
+          desktop — a keyboard user needs a way past them (§11.2). */}
+      <a
+        href="#obsah"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+      >
+        Přeskočit na obsah
+      </a>
+
       {/* Desktop top bar */}
       <header className="sticky top-0 z-40 hidden border-b border-border bg-background/90 backdrop-blur md:block">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-1 px-4">
@@ -62,7 +71,13 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-4 md:py-6">{children}</main>
+      <main
+        id="obsah"
+        tabIndex={-1}
+        className="mx-auto max-w-6xl px-4 py-4 md:py-6"
+      >
+        {children}
+      </main>
 
       {/* Mobile bottom bar — max 5 items, cookbook first (docs/DESIGN.md §5) */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface md:hidden">

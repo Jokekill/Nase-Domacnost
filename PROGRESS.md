@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
 **Poslední aktualizace:** 2026-08-14
-**Aktuální fáze:** Fáze 10 — offline a PWA (offline čtení i zápis hotové a ověřené; zbývá jediné: potvrdit registraci service workeru a instalaci na plochu v reálném Chromu — postup níže)
+**Aktuální fáze:** Fáze 11 — doladění a nasazení (hotovo vše kromě 11.5)
 **Právě rozpracováno:** nic
-**Další krok:** Vojta ověří service worker dle „Jak ověřit service worker" níže; pak Fáze 11 — doladění a nasazení
+**Další krok:** na Vojtovi — nasadit na Pi dle docs/DEPLOY.md (11.5) a zkontrolovat service worker v Chromu (10.2/10.7, postup níže)
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -76,6 +76,7 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 ## Rozhodnutí, která čekají na Vojtu
 
 - [ ] Odsouhlasení Fází 3, 4, 5, 6, 7 a 8
+- [ ] **Ověřit service worker a instalaci na plochu v Chromu** — postup výše. Vojta 2026-08-14 rozhodl pokračovat dál s tím, že to zkontroluje dodatečně; do té doby to nikdo neviděl běžet (viz 10.2/10.7)
 - [ ] **Recepty k importu:** formát je hotový v docs/IMPORT-RECIPES.md včetně promptu pro AI — můžeš začít převádět PDF a nahrát je v Kuchařka → Import
 
 ---
@@ -215,10 +216,10 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Fáze 11 — Doladění
 
-- [ ] 11.1 Výkon: indexy, N+1, velikost bundle
-- [ ] 11.2 Přístupnost
-- [ ] 11.3 Doplnění testů (Vitest povinné oblasti, Playwright smoke)
-- [ ] 11.4 Multi-arch build (buildx, amd64+arm64), docs/DEPLOY.md
-- [ ] 11.5 Nasazení na Raspberry Pi 5 + Tailscale
-- [ ] 11.6 Ověření obnovy ze zálohy na čisté instalaci
-- [ ] 11.7 Finální dokumentace
+- [x] 11.1 Výkon — změřeno na produkčním buildu (dev server má ~550 ms fixní režie, z něj čísla neplatí): všechny endpointy 35–60 ms, `sync/pull?bootstrap=true` zrychlen z 220 na 129 ms paralelním načtením 20 tabulek. Bundle: sdílených 104 kB, největší stránka 159 kB, žádná serverová knihovna (sharp, react-pdf, drizzle, argon2) se do klientského balíku nedostala. Indexy zkontrolovány u rostoucích tabulek, doplňovat nebylo co — hotovo 2026-08-14, D-027
+- [x] 11.2 Přístupnost — `useDialog` ve všech čtyřech modálech (role dialog, aria-modal, Escape, fokus dovnitř/past/návrat na spouštěč; ověřeno v prohlížeči i Playwrightem), odkaz „Přeskočit na obsah", popisky u výběru veličiny a nahrání ZIPu, karta receptu z h3 na h2, `role="status"` u hlášek, mluvící `aria-label` u týdenního grafu. Kontrast (WCAG AA) přepočítán na všech hlavních obrazovkách ve světlém i tmavém režimu — bez nálezu — hotovo 2026-08-14
+- [x] 11.3 Testy — 151 jednotkových (nově 21 nad offline zrcadlem přes `fake-indexeddb`) + Playwright smoke: 6 scénářů × Chrome a Pixel, přihlášení jednou přes `storageState` (jinak narazí na vlastní rate limit). CI má nový `e2e` job s Postgresem, migrací, seedem a produkčním serverem — hotovo 2026-08-14
+- [x] 11.4 Docker obraz (Debian slim kvůli sharp, standalone, healthcheck, uid 1001), `migrate` jako jednorázová služba, `app` v compose, docs/DEPLOY.md; amd64 obraz ověřen celou smoke suitou (7/7) — hotovo 2026-08-14, D-027
+- [ ] 11.5 Nasazení na Raspberry Pi 5 + Tailscale — **na Vojtovi**, postup v docs/DEPLOY.md
+- [x] 11.6 Obnova ze zálohy na čisté instalaci — ověřeno: `pg_restore` denního dumpu do prázdné databáze (45 tabulek, shodné počty), produkční obraz nad obnovenou databází naběhl, přihlášení i výpis receptů fungují, archiv fotek obsahuje 19 položek — hotovo 2026-08-14
+- [x] 11.7 Dokumentace — README.md (co to umí, rychlý start, rozcestník) a docs/DEPLOY.md; PROGRESS a DECISIONS průběžně — hotovo 2026-08-14

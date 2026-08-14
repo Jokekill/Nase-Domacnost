@@ -23,3 +23,57 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+
+  e2e:
+    # Smoke tests against a real build and a real database (§11.3).
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DB: domacnost
+          POSTGRES_USER: domacnost
+          POSTGRES_PASSWORD: domacnost_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U domacnost"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://domacnost:domacnost_ci@127.0.0.1:5432/domacnost
+      # CI runs over plain http, so the session cookie must not be Secure.
+      DEV_INSECURE_COOKIES: "true"
+      PUBLIC_SHARING_ENABLED: "false"
+      E2E_BASE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:migrate
+      # The suite expects the seeded household (recipe, shopping list, tasks).
+      - run: pnpm db:seed
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Start the app
+        run: pnpm start &
+      - name: Wait for the app
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf "$E2E_BASE_URL/api/health" && exit 0
+            sleep 2
+          done
+          echo "app did not come up" && exit 1
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

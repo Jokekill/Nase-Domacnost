@@ -43,8 +43,41 @@ services:
       - ${BACKUPS_HOST_DIR:-./data/backups}:/data/backups
     entrypoint: ["bash", "/usr/local/bin/loop.sh"]
 
-  # app service is added in Phase 11 (multi-arch image build for Raspberry Pi);
-  # during development the app runs via `pnpm dev` against this db.
+  # One-shot: brings the schema up to date, then exits. Runs before the app so
+  # two containers can never migrate at the same time (§11.4).
+  # `docker compose run --rm migrate` after every update.
+  migrate:
+    image: ${APP_IMAGE:-nase-domacnost:local}
+    build: .
+    restart: "no"
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://domacnost:${POSTGRES_PASSWORD:-domacnost_dev}@db:5432/domacnost
+    command: ["node", "scripts/migrate.mjs"]
+
+  app:
+    image: ${APP_IMAGE:-nase-domacnost:local}
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://domacnost:${POSTGRES_PASSWORD:-domacnost_dev}@db:5432/domacnost
+      UPLOADS_DIR: /data/uploads
+      PUBLIC_SHARING_ENABLED: ${PUBLIC_SHARING_ENABLED:-false}
+      # HTTPS comes from `tailscale serve` in front of this (D-003), so the
+      # __Host- cookie prefix stays on.
+      DEV_INSECURE_COOKIES: ${DEV_INSECURE_COOKIES:-false}
+    ports:
+      # Bound to localhost: the outside world reaches it through Tailscale.
+      - "127.0.0.1:3000:3000"
+    volumes:
+      # Same host directory the backup sidecar reads (read-only) — see above.
+      - ${UPLOADS_HOST_DIR:-./data/uploads}:/data/uploads
 
 volumes:
   db_data:

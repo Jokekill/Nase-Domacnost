@@ -182,7 +182,10 @@ export default function TasksPage() {
       )}
 
       {message && (
-        <p className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm">
+        <p
+          role="status"
+          className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm"
+        >
           {message}
         </p>
       )}
