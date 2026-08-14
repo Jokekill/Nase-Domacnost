@@ -35,9 +35,11 @@ export function AppShell({
     <div className="min-h-dvh pb-20 md:pb-0">
       {/* Nine links stand between the top of the page and the content on the
           desktop — a keyboard user needs a way past them (§11.2). */}
+      {/* Parked above the viewport rather than `sr-only`: `focus:not-sr-only`
+          loses to `sr-only` here, and a skip link nobody can see is no help. */}
       <a
         href="#obsah"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+        className="absolute left-3 top-3 z-50 -translate-y-24 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform focus:translate-y-0"
       >
         Přeskočit na obsah
       </a>

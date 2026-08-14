@@ -123,3 +123,19 @@ test("dialog jde zavřít klávesnicí a vrátí fokus", async ({ page }) => {
   await expect(dialog).toBeHidden();
   await expect(opener).toBeFocused();
 });
+
+test("odkaz Preskocit na obsah se ukaze pri tabu a skoci na obsah", async ({
+  page,
+}) => {
+  await page.goto("/kucharka");
+  const skip = page.getByRole("link", { name: /přeskočit na obsah/i });
+  // Parked above the viewport, not display:none — it has to stay focusable.
+  await expect(skip).not.toBeInViewport();
+
+  await page.keyboard.press("Tab");
+  await expect(skip).toBeFocused();
+  await expect(skip).toBeInViewport();
+
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main#obsah")).toBeFocused();
+});
