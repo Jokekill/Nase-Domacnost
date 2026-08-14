@@ -13,6 +13,8 @@ import {
   mealTypes,
   storeSections,
   taskLists,
+  taskTemplates,
+  templateGroups,
 } from "./schema";
 
 type SeedCategory = {
@@ -46,6 +48,10 @@ type SeedFile = {
   mealTypes: string[];
   taskLists: string[];
   storeSections: { name: string; foodCategories: string[] }[];
+  cleaningTemplates: {
+    group: string;
+    items: { name: string; intervalDays: number | null }[];
+  }[];
 };
 
 let cached: SeedFile | null = null;
@@ -92,6 +98,7 @@ export async function seedHouseholdCatalogue(
   recipeCategories: number;
   storeSections: number;
   mealTypes: number;
+  taskTemplates: number;
 }> {
   const seed = await loadSeedFile();
 
@@ -227,17 +234,46 @@ export async function seedHouseholdCatalogue(
       lastModifiedBy: userId,
     })),
   );
-  await tx.insert(taskLists).values(
-    seed.taskLists.map((name, index) => ({
-      id: uuidv7(),
+  const taskListRows = seed.taskLists.map((name, index) => ({
+    id: uuidv7(),
+    householdId,
+    name,
+    sortOrder: index,
+    lastModifiedBy: userId,
+  }));
+  await tx.insert(taskLists).values(taskListRows);
+
+  /* ---- cleaning templates, grouped ---- */
+  const cleaningListId =
+    taskListRows.find((list) => list.name === "Úklid")?.id ?? null;
+  let templateCount = 0;
+  for (const [groupIndex, group] of seed.cleaningTemplates.entries()) {
+    const groupId = uuidv7();
+    await tx.insert(templateGroups).values({
+      id: groupId,
       householdId,
-      name,
-      sortOrder: index,
+      taskListId: cleaningListId,
+      name: group.group,
+      sortOrder: groupIndex,
       lastModifiedBy: userId,
-    })),
-  );
+    });
+    await tx.insert(taskTemplates).values(
+      group.items.map((item, index) => ({
+        id: uuidv7(),
+        householdId,
+        taskListId: cleaningListId,
+        templateGroupId: groupId,
+        name: item.name,
+        intervalDays: item.intervalDays,
+        sortOrder: index,
+        lastModifiedBy: userId,
+      })),
+    );
+    templateCount += group.items.length;
+  }
 
   return {
+    taskTemplates: templateCount,
     foodCategories: flatFoodCats.length,
     foods: foodRows.length,
     recipeCategories: flatRecipeCats.length,

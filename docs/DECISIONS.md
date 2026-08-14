@@ -4,6 +4,12 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-021 — Návrhy občasných úkolů: relativní naléhavost + strop na období (2026-08-14)
+
+**Co:** `src/lib/domain/task-suggestions.ts` (12 testů). Šablona je „po termínu", když `poslední splnění + interval_days <= dnes`; nikdy nesplněná se počítá od svého vzniku. Řazení podle **relativní** prodlevy (`daysOverdue / intervalDays`) — týden zpoždění u týdenního úkolu váží víc než u ročního. Šablona s už otevřeným úkolem se přeskočí. Nabízí se **nejvýš 3 najednou** (parametrizovatelné); zbytek počká na další období — to je vlastní rozprostření zátěže. Při shodě vyhrává delší interval, aby vzácné velké práce nezůstávaly poslední.
+**Proč:** Zadání §10.5 („občasné úkoly se rozdělují postupně mezi běžné týdny, navrhni rozumný algoritmus rozprostření zátěže"). Ověřeno: ze 6 prošlých šablon UI nabídlo 3 nejnaléhavější a po zařazení jedné se doplnila další v pořadí.
+**Alternativy:** Absolutní počet dní po termínu (ročním úkolům by dával nesmyslnou prioritu), nabízet vše najednou (zahltí týden — přesně to, čemu se zadání chce vyhnout).
+
 ## D-020 — Import do nákupu slučuje s nezaškrtnutými položkami a zachovává zdroje (2026-08-14)
 
 **Co:** Import receptu/jídelníčku do seznamu projde slučovačkou spolu s **nezaškrtnutými** položkami, které už na seznamu jsou; zaškrtnuté zůstanou nedotčené (rozdělaný nákup se nesmí přeházet). Původní `shopping_item_sources` se přenášejí do sloučeného řádku (`carriedSources`), takže attribuce se nikdy neztratí. Sekce obchodu se u položky odvodí z nejbližšího předka ve stromu potravin a uloží jako snapshot.

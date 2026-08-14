@@ -125,13 +125,15 @@ Stejné rozhraní má `/api/food-categories` (Fáze 3).
 
 | Metoda | Cesta | Popis |
 |---|---|---|
-| GET/POST/PATCH/DELETE | `/api/task-lists[...]` | seznamy |
-| GET/POST/PATCH/DELETE | `/api/template-groups[...]`, `/api/task-templates[...]` | šablony |
-| GET  | `/api/tasks?from=&to=&listId=&assignee=&status=` | úkoly |
-| POST/PATCH/DELETE | `/api/tasks[/:id]` | správa (vytvoření i hromadné ze šablon: `templateIds[]` + období) |
-| POST | `/api/tasks/assign` | hromadné přiřazení `{taskIds[], userId}` |
-| POST | `/api/tasks/:id/complete` / `/uncomplete` | splnění (zaznamená kdo) |
-| GET  | `/api/tasks/suggestions` | občasné úkoly „je čas znovu" |
+| GET/POST | `/api/task-lists` | seznamy úkolů |
+| GET/POST | `/api/template-groups` | skupiny šablon |
+| GET/POST | `/api/task-templates`, DELETE `/api/task-templates/:id` | šablony (`intervalDays` = null pro jednorázové) |
+| GET  | `/api/tasks?from=&to=&listId=&status=` | úkoly včetně přiřazených osob |
+| POST | `/api/tasks` | vytvoření: `{templateIds[], customNames[], periodStart, periodEnd, taskListId}` |
+| PATCH/DELETE | `/api/tasks/:id` | úprava / soft delete |
+| POST | `/api/tasks/assign` | hromadné přiřazení `{taskIds[], userId, mode: "add"\|"replace"}` |
+| POST | `/api/tasks/:id/complete` | `{done: bool}` — kdokoli, zaznamená kdo splnil |
+| GET  | `/api/tasks/suggestions?max=` | občasné úkoly „je čas znovu" (výchozí strop 3) |
 
 ## Deník (Fáze 7)
 

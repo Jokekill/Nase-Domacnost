@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
-**Poslední aktualizace:** 2026-08-14 (večer)
-**Aktuální fáze:** Fáze 4 a 5 HOTOVÉ (jídelníček, kalendář, nákup) — ověřeno v prohlížeči
+**Poslední aktualizace:** 2026-08-14
+**Aktuální fáze:** Fáze 6 — Úkoly a úklid (HOTOVÁ, ověřeno v prohlížeči)
 **Právě rozpracováno:** nic — čeká se na odsouhlasení Vojtou
-**Další krok:** Fáze 6 — Úkoly a úklid (schéma tasks/task_lists už existuje z Fáze 4, chybí šablony, opakování, přiřazování a UI)
+**Další krok:** Fáze 7 — Výživový deník (diary_entries se snapshotem hodnot, denní/týdenní přehledy, cíle)
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -116,13 +116,14 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Fáze 6 — Úkoly a úklid
 
-- [ ] 6.1 Schéma: task_lists, task_templates, template_groups, tasks, task_assignees, task_completion_history
-- [ ] 6.2 Obecné seznamy úkolů, CRUD
-- [ ] 6.3 Šablony a skupiny šablon, intervaly opakování včetně vlastního
-- [ ] 6.4 Vytvoření konkrétního úklidu: období → výběr ze šablon → vlastní úkoly → přiřazení
-- [ ] 6.5 Hromadné přiřazování po osobách
-- [ ] 6.6 Moje úkoly / Ostatní úkoly, odškrtnutí cizího úkolu se záznamem, kdo splnil
-- [ ] 6.7 Historie splnění, návrhy občasných úkolů, algoritmus rozprostření zátěže
+- [x] 6.1 Schéma doplněno o template_groups, task_templates, task_completion_history (migrace 0007+0008); tasks/task_lists/task_assignees už z Fáze 4 — hotovo 2026-08-14
+- [x] 6.2 Obecné seznamy úkolů (Úklid, Nákup, Opravy, Zahrada, Administrativa ze seedu) + API — hotovo 2026-08-14
+- [x] 6.3 Šablony a skupiny, libovolný interval; seed 20 šablon ve 3 skupinách (Denní/Týdenní/Velký úklid) — hotovo 2026-08-14
+- [x] 6.4 Průvodce úklidem: období → výběr ze šablon → vlastní úkoly → teprve pak přiřazení — hotovo 2026-08-14
+- [x] 6.5 Hromadné přiřazování (vyber osobu → zaškrtni úkoly → potvrď) — ověřeno: „Přiřazeno 2 úkolů — Eliška" — hotovo 2026-08-14
+- [x] 6.6 Moje/Ostatní úkoly, kdokoli může odškrtnout cizí úkol, zaznamená se kdo — ověřeno: Eliška splnila Vojtův úkol — hotovo 2026-08-14
+- [x] 6.7 Historie splnění + návrhy „je čas znovu" s rozprostřením zátěže (D-021, 12 testů) — ověřeno: ze 6 prošlých nabídne 3 — hotovo 2026-08-14
+- [x] 6.8 Neměnnost: úkol je kopie šablony — přejmenování šablony nezmění existující úkoly (ověřeno testem)
 
 ## Fáze 7 — Výživový deník
 

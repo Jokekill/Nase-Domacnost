@@ -313,6 +313,44 @@
   ],
   "mealTypes": ["Snídaně", "Dopolední svačina", "Oběd", "Odpolední svačina", "Večeře"],
   "taskLists": ["Úklid", "Nákup", "Opravy", "Zahrada", "Administrativa"],
+  "$cleaningTemplates": "Výchozí šablony úklidu v seznamu Úklid. intervalDays: null = jednorázový.",
+  "cleaningTemplates": [
+    {
+      "group": "Denní úklid",
+      "items": [
+        { "name": "Umýt nádobí", "intervalDays": 1 },
+        { "name": "Utřít kuchyňskou linku", "intervalDays": 1 },
+        { "name": "Vynést koš", "intervalDays": 2 }
+      ]
+    },
+    {
+      "group": "Týdenní úklid",
+      "items": [
+        { "name": "Vysát", "intervalDays": 7 },
+        { "name": "Vytřít podlahy", "intervalDays": 7 },
+        { "name": "Uklidit koupelnu", "intervalDays": 7 },
+        { "name": "Vyčistit záchod", "intervalDays": 7 },
+        { "name": "Utřít prach", "intervalDays": 7 },
+        { "name": "Vyměnit ručníky", "intervalDays": 7 },
+        { "name": "Vyprat prádlo", "intervalDays": 7 }
+      ]
+    },
+    {
+      "group": "Velký úklid",
+      "items": [
+        { "name": "Umýt okna", "intervalDays": 180 },
+        { "name": "Vyčistit troubu", "intervalDays": 60 },
+        { "name": "Odmrazit a umýt lednici", "intervalDays": 90 },
+        { "name": "Vyčistit pračku", "intervalDays": 90 },
+        { "name": "Vyluxovat pod nábytkem", "intervalDays": 90 },
+        { "name": "Vyčistit odpady", "intervalDays": 90 },
+        { "name": "Umýt dveře a vypínače", "intervalDays": 180 },
+        { "name": "Vyčistit kávovar", "intervalDays": 30 },
+        { "name": "Vyměnit filtr digestoře", "intervalDays": 180 },
+        { "name": "Protřídit šatník", "intervalDays": 365 }
+      ]
+    }
+  ],
   "$storeSections": "Pořadí odpovídá průchodu běžným obchodem; klíč mapuje skupiny potravin na sekci.",
   "storeSections": [
     { "name": "Ovoce a zelenina", "foodCategories": ["zelenina", "ovoce"] },
