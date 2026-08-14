@@ -74,6 +74,44 @@ export const taskLists = pgTable(
   (t) => [index("task_lists_household_idx").on(t.householdId)],
 );
 
+/** Groups of templates: "Denní úklid", "Týdenní úklid", "Velký úklid", … */
+export const templateGroups = pgTable(
+  "template_groups",
+  {
+    ...syncColumns,
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    taskListId: uuid("task_list_id").references(() => taskLists.id),
+    name: text("name").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [index("template_groups_household_idx").on(t.householdId)],
+);
+
+export const taskTemplates = pgTable(
+  "task_templates",
+  {
+    ...syncColumns,
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    taskListId: uuid("task_list_id").references(() => taskLists.id),
+    templateGroupId: uuid("template_group_id").references(
+      () => templateGroups.id,
+    ),
+    name: text("name").notNull(),
+    description: text("description"),
+    /** NULL = one-off template; otherwise any interval in days. */
+    intervalDays: integer("interval_days"),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (t) => [
+    index("task_templates_household_idx").on(t.householdId),
+    index("task_templates_group_idx").on(t.templateGroupId),
+  ],
+);
+
 export const tasks = pgTable(
   "tasks",
   {
@@ -82,7 +120,9 @@ export const tasks = pgTable(
       .notNull()
       .references(() => households.id),
     taskListId: uuid("task_list_id").references(() => taskLists.id),
-    templateId: uuid("template_id"),
+    // A task created from a template is an independent copy — later template
+    // edits never change it (zadání §5.5, neměnnost historie).
+    templateId: uuid("template_id").references(() => taskTemplates.id),
     name: text("name").notNull(),
     description: text("description"),
     periodStart: date("period_start"),
@@ -101,6 +141,34 @@ export const tasks = pgTable(
       t.periodEnd,
     ),
     index("tasks_status_idx").on(t.status),
+  ],
+);
+
+/**
+ * Append-only record of when a template task was actually done. Drives the
+ * "je čas znovu vyčistit troubu" suggestions (zadání §10.5).
+ */
+export const taskCompletionHistory = pgTable(
+  "task_completion_history",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id),
+    templateId: uuid("template_id")
+      .notNull()
+      .references(() => taskTemplates.id),
+    taskId: uuid("task_id").references(() => tasks.id),
+    completedAt: timestamp("completed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedBy: uuid("completed_by").references(() => users.id),
+  },
+  (t) => [
+    index("task_completion_history_template_idx").on(
+      t.templateId,
+      t.completedAt,
+    ),
   ],
 );
 
