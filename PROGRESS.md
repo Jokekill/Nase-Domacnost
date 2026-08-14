@@ -18,6 +18,7 @@ pnpm dev            # http://localhost:3000
 ```
 
 Testovací přihlášení: vojta@test.local / heslo123 (admin), eliska@test.local / heslo123 (člen).
+Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes winget) a Docker Desktop (starší, 20.10 — funguje).
 
 ## Jak ověřit service worker (zbytek kroku 10.2/10.7)
 
@@ -56,7 +57,6 @@ potřeba), přihlásit se a projít:
 Ověřeno bez prohlížeče: `/sw.js` se servíruje (200, `application/javascript`,
 ~52 kB), všech 142 položek precache manifestu vrací na produkčním serveru 200,
 manifest i všechny tři ikony (192, 512, maskable) se načítají.
-Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes winget) a Docker Desktop (starší, 20.10 — funguje).
 
 ## Známé problémy / TODO
 
