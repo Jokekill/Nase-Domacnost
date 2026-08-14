@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
 **Poslední aktualizace:** 2026-08-14
-**Aktuální fáze:** Fáze 9 — PDF a zálohy (HOTOVÁ, ověřeno včetně obnovy do prázdné DB)
-**Právě rozpracováno:** nic — čeká se na odsouhlasení Vojtou
-**Další krok:** Fáze 10 — offline režim a PWA (service worker, Dexie mirror, sync pull/push, konflikty)
+**Aktuální fáze:** Fáze 10 — offline a PWA (jádro hotové a ověřené; zbývá dotáhnout 10.2/10.7/10.9 — viz checklist)
+**Právě rozpracováno:** nic
+**Další krok:** dokončit offline čtení receptů a napojit úkoly/deník na outbox, ověřit service worker v reálném Chromu; pak Fáze 11 — doladění a nasazení
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -53,7 +53,7 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 - [x] 0.5 Návrh ukládání fotek — hotovo 2026-08-13, docs/ARCHITECTURE.md §3
 - [x] 0.6 Návrh zálohování — hotovo 2026-08-13, docs/ARCHITECTURE.md §4
 - [x] 0.7 Návrh autentizace — hotovo 2026-08-13, docs/ARCHITECTURE.md §1
-- [ ] 0.8 Návrh sync protokolu → docs/SYNC.md — návrh hotov 2026-08-13, ČEKÁ NA ODSOUHLASENÍ
+- [x] 0.8 Návrh sync protokolu → docs/SYNC.md — odsouhlaseno Vojtou (D-011), aktualizováno při implementaci ve Fázi 10
 - [x] 0.10 Vizuální identita → docs/DESIGN.md — hotovo 2026-08-13
 
 ## Fáze 1 — Základ
@@ -157,15 +157,15 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 
 ## Fáze 10 — Offline a PWA
 
-- [ ] 10.1 Návrh docs/SYNC.md odsouhlasen (z Fáze 0.8), finalizace detailů
-- [ ] 10.2 @serwist/next service worker, manifest, instalace na plochu
-- [ ] 10.3 Dexie lokální mirror + outbox
-- [ ] 10.4 GET /api/sync/pull (kurzor podle change_log.seq)
-- [ ] 10.5 POST /api/sync/push (idempotence podle op_id)
-- [ ] 10.6 Konflikty: field-level LWW, odškrtnutí vyhrává, notifikace o zahozené změně + testy
-- [ ] 10.7 Cache fotek (thumb/card naposledy zobrazených), fotky v outboxu
-- [ ] 10.8 Indikace stavu synchronizace v UI
-- [ ] 10.9 Ověření offline scénářů dle priority 7.2
+- [x] 10.1 docs/SYNC.md aktualizován o odchylky zjištěné při implementaci (bootstrap zvlášť, rozsah pushe, 409 místo 410) — hotovo 2026-08-14, D-025
+- [~] 10.2 @serwist/next + manifest + ikony + explicitní registrace SW; build i servírování ověřeno (200, application/javascript), **registraci se nepodařilo ověřit** — vestavěný prohlížeč service workery blokuje, nutné zkusit v Chromu/na telefonu
+- [x] 10.3 Dexie mirror (20 tabulek) + outbox + evidence zahozených změn — hotovo 2026-08-14
+- [x] 10.4 GET /api/sync/pull: přírůstkově podle change_log.seq, `?bootstrap=true` pro první sync, 409 při prošlém kurzoru — ověřeno
+- [x] 10.5 POST /api/sync/push: idempotence podle opId (opakování vrátí `already_applied`), whitelist entit i polí — ověřeno
+- [x] 10.6 Konflikty: field-level LWW, clamp hodin, odškrtnutí vyhrává, delete vs. update — 16 testů + ověřeno proti živému serveru
+- [~] 10.7 Cache fotek v service workeru napsaná (CacheFirst, LRU 300 souborů); ověření čeká na 10.2. Fotky v outboxu zatím nejsou — upload je online-only
+- [x] 10.8 Indikátor v hlavičce + Nastavení → Synchronizace (fronta, poslední sync, zahozené změny) — hotovo 2026-08-14
+- [~] 10.9 Ověřeno: nákupní seznam se čte ze zrcadla bez sítě a odškrtnutí přežije výpadek (priorita 2). Čtení receptů offline (priorita 1) zatím není napojené — data v zrcadle jsou, obrazovky z něj ještě nečtou; úkoly a deník mají offline mutace v knihovně, ale obrazovky je ještě nepoužívají (priority 3–5)
 
 ## Fáze 11 — Doladění
 

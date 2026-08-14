@@ -5,3 +5,4 @@ export * from "./planning";
 export * from "./shopping";
 export * from "./diary";
 export * from "./sharing";
+export * from "./sync";

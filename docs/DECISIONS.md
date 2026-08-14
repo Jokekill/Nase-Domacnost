@@ -4,6 +4,12 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-025 — Sync: bootstrap zvlášť, offline zápis jen pro vyjmenovaná pole (2026-08-14)
+
+**Co:** Rozhodovací logika slučování je čistá funkce `src/lib/domain/sync-merge.ts` (16 testů) — server ji jen krmí aktuálním řádkem. První sync neteče přes `change_log`, ale stahuje snapshot (`?bootstrap=true`), protože projít 500 záznamů kvůli 250 potravinám nedává smysl. Push přijímá **jen vyjmenované entity a pole** (`registry.ts`); ostatní se odmítne, takže offline klient nikdy nemůže zapsat něco, co jsme nepromysleli. Kdo odškrtl, doplňuje **server ze session**. Odškrtávání v nákupu jde přes outbox **i když je uživatel online** — je to hlavní offline scénář a idempotentní fronta chrání i před rozpadlou wifi v obchodě.
+**Proč:** Zadání §7. Ověřeno v prohlížeči: při simulovaném výpadku zůstala operace ve frontě, po obnovení se odeslala a server i zrcadlo skončily ve shodě; souběžná starší poznámka se zahodila (`merged_partial`) a objevila se v Nastavení → Synchronizace; starší zaškrtnutí přebilo novější odškrtnutí dle §4.2.
+**Alternativy:** Posílat celé řádky místo změněných polí (rozbíjí field-level merge), povolit push všude (velká plocha k obraně za malý užitek), bootstrap přes change_log (pomalý první start).
+
 ## D-024 — PDF fonty jako TTF v repu, zálohy smyčkou v sidecaru, import nikdy nepřepisuje (2026-08-14)
 
 **Co:** Tři rozhodnutí Fáze 9.

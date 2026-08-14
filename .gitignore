@@ -36,3 +36,6 @@ test-results/
 /data/
 
 tsconfig.tsbuildinfo
+.next-prod/
+public/sw.js
+public/sw.js.map

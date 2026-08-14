@@ -8,6 +8,8 @@ import { uuidv7 } from "uuidv7";
 import { apiFetch } from "@/lib/api/client";
 import { formatRange } from "@/lib/dates";
 import { formatScaled } from "@/lib/domain/servings";
+import { checkShoppingItem } from "@/lib/offline/mutations";
+import { readShoppingListFromMirror } from "@/lib/offline/reads";
 import { UNIT_LABELS, type Unit } from "@/lib/recipes/types";
 import type { RecipeListResponse } from "@/lib/recipes/types";
 
@@ -51,18 +53,28 @@ export default function ShoppingListPage() {
 
   const { data: list, isLoading } = useQuery({
     queryKey: ["shopping-list", id],
-    queryFn: () => apiFetch<ListDetail>(`/api/shopping-lists/${id}`),
+    // In a shop with no signal the list must still be there: fall back to the
+    // local mirror (docs/SYNC.md §6, priority 2).
+    queryFn: async () => {
+      try {
+        return await apiFetch<ListDetail>(`/api/shopping-lists/${id}`);
+      } catch (err) {
+        const mirrored = await readShoppingListFromMirror(id).catch(() => null);
+        if (mirrored) return mirrored as unknown as ListDetail;
+        throw err;
+      }
+    },
   });
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["shopping-list", id] });
 
   const toggle = useMutation({
+    // Ticking goes through the outbox, online or not: it is THE offline
+    // scenario (docs/SYNC.md §6) and the outbox is idempotent, so a flaky
+    // shop wifi cannot lose or double-apply a tick.
     mutationFn: ({ itemId, checked }: { itemId: string; checked: boolean }) =>
-      apiFetch(`/api/shopping-items/${itemId}/check`, {
-        method: "POST",
-        json: { checked },
-      }),
+      checkShoppingItem(itemId, checked),
     // Optimistic: ticking things off in a shop must feel instant.
     onMutate: async ({ itemId, checked }) => {
       await queryClient.cancelQueries({ queryKey: ["shopping-list", id] });

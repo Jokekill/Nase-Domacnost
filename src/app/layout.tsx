@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ServiceWorkerRegistration } from "@/components/sw-register";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/fraunces";
 import "./globals.css";
@@ -9,6 +10,15 @@ export const metadata: Metadata = {
     template: "%s · Naše domácnost",
   },
   description: "Kuchařka a organizace domácnosti",
+  applicationName: "Naše domácnost",
+  appleWebApp: {
+    capable: true,
+    title: "Domácnost",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -37,7 +47,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        {children}
+        <ServiceWorkerRegistration />
+      </body>
     </html>
   );
 }

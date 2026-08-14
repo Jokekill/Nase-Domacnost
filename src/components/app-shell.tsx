@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SyncIndicator } from "@/components/sync-indicator";
 
 const MAIN_NAV = [
   { href: "/kucharka", label: "Kuchařka", icon: "📖" },
@@ -54,9 +55,10 @@ export function AppShell({
               {item.label}
             </Link>
           ))}
-          <span className="ml-auto text-sm text-muted-foreground">
-            {userName}
-          </span>
+          <div className="ml-auto flex items-center gap-1">
+            <SyncIndicator />
+            <span className="text-sm text-muted-foreground">{userName}</span>
+          </div>
         </div>
       </header>
 

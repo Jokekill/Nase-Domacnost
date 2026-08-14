@@ -1,8 +1,21 @@
 # Offline synchronizace — návrh protokolu
 
-**Stav:** návrh k odsouhlasení (krok 0.8), 2026-08-13. Implementace ve Fázi 10;
-datový model je na protokol připravený od Fáze 1 (UUIDv7 z klienta, soft
-delete, `updated_at`, `change_log`).
+**Stav:** odsouhlaseno (D-011), implementováno ve Fázi 10, 2026-08-14.
+
+Odchylky od původního návrhu, na které se přišlo při implementaci:
+
+- **Bootstrap má vlastní tvar odpovědi.** `GET /api/sync/pull?bootstrap=true`
+  vrací rovnou `{ tables: {…}, cursor }` místo proudu změn — první sync tak
+  neprochází celý `change_log` (klidně 500 záznamů na 250 potravin).
+- **Push umí zatím jen tři entity** (`shopping_items`, `tasks`,
+  `diary_entries`) a u nich jen vyjmenovaná pole (`writableFields`
+  v `src/lib/sync/registry.ts`). Cokoli dalšího se odmítne jako
+  `entity_not_writable_offline`. Offline zakládání receptů (priorita 5) tím
+  zatím není pokryté.
+- **Kdo odškrtl, určuje server**, ne payload: `checked_by` / `completed_by` se
+  dosazují ze session, jinak by si klient mohl přiřknout cizí identitu.
+- **Prošlý kurzor vrací 409**, ne 410 — chybové kódy aplikace mapuje
+  `ApiError('conflict')`; význam (re-bootstrap) je stejný.
 
 ---
 
