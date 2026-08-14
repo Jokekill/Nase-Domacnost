@@ -4,9 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { CleanupWizard } from "@/components/tasks/cleanup-wizard";
 import { EmptyState } from "@/components/empty-state";
+import { OfflineNotice } from "@/components/offline-notice";
 import { apiFetch } from "@/lib/api/client";
 import { formatRange } from "@/lib/dates";
-import { describeSuggestion, type TaskSuggestion } from "@/lib/domain/task-suggestions";
+import { completeTask } from "@/lib/offline/mutations";
+import { cached, readTasksFromMirror } from "@/lib/offline/reads";
+import {
+  describeSuggestion,
+  type TaskSuggestion,
+} from "@/lib/domain/task-suggestions";
 
 type Assignee = { userId: string; displayName: string };
 type Task = {
@@ -38,15 +44,32 @@ export default function TasksPage() {
 
   const { data: me } = useQuery({
     queryKey: ["me"],
-    queryFn: () => apiFetch<Me>("/api/auth/me"),
+    queryFn: () => cached("me", () => apiFetch<Me>("/api/auth/me")),
   });
   const { data: members } = useQuery({
     queryKey: ["members"],
-    queryFn: () => apiFetch<{ items: Member[] }>("/api/household/members"),
+    queryFn: () =>
+      cached("members", () =>
+        apiFetch<{ items: Member[] }>("/api/household/members"),
+      ),
   });
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["tasks"],
-    queryFn: () => apiFetch<{ items: Task[] }>("/api/tasks"),
+    // Offline the list comes from the mirror (docs/SYNC.md §6, priority 3).
+    queryFn: async () => {
+      try {
+        return await apiFetch<{ items: Task[] }>("/api/tasks");
+      } catch (err) {
+        const mirrored = await readTasksFromMirror().catch(() => null);
+        if (mirrored) {
+          return { ...mirrored, offline: true } as unknown as {
+            items: Task[];
+            offline: true;
+          };
+        }
+        throw err;
+      }
+    },
   });
   const { data: suggestions } = useQuery({
     queryKey: ["task-suggestions"],
@@ -61,11 +84,10 @@ export default function TasksPage() {
   };
 
   const complete = useMutation({
+    // Through the outbox, online or not — same reasoning as ticking off the
+    // shopping list (D-025): the queue is idempotent and survives a dropout.
     mutationFn: ({ id, done }: { id: string; done: boolean }) =>
-      apiFetch(`/api/tasks/${id}/complete`, {
-        method: "POST",
-        json: { done },
-      }),
+      completeTask(id, done),
     onMutate: async ({ id, done }) => {
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
       const previous = queryClient.getQueryData<{ items: Task[] }>(["tasks"]);
@@ -73,9 +95,7 @@ export default function TasksPage() {
         old
           ? {
               items: old.items.map((t) =>
-                t.id === id
-                  ? { ...t, status: done ? "done" : "open" }
-                  : t,
+                t.id === id ? { ...t, status: done ? "done" : "open" } : t,
               ),
             }
           : old,
@@ -83,7 +103,8 @@ export default function TasksPage() {
       return { previous };
     },
     onError: (_e, _v, context) => {
-      if (context?.previous) queryClient.setQueryData(["tasks"], context.previous);
+      if (context?.previous)
+        queryClient.setQueryData(["tasks"], context.previous);
     },
     onSettled: invalidate,
   });
@@ -113,11 +134,11 @@ export default function TasksPage() {
   });
 
   const items = tasks?.items ?? [];
+  const offline =
+    (tasks as { offline?: boolean } | undefined)?.offline === true;
   const open = items.filter((t) => t.status === "open");
   const done = items.filter((t) => t.status === "done");
-  const mine = open.filter((t) =>
-    t.assignees.some((a) => a.userId === me?.id),
-  );
+  const mine = open.filter((t) => t.assignees.some((a) => a.userId === me?.id));
   const others = open.filter(
     (t) => !t.assignees.some((a) => a.userId === me?.id),
   );
@@ -127,28 +148,43 @@ export default function TasksPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-3xl font-semibold">Úkoly</h1>
         <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setAssignMode(!assignMode);
-              setPicked([]);
-            }}
-            className={`rounded-lg border px-4 py-2 text-sm font-medium min-h-11 ${
-              assignMode ? "border-primary text-primary" : "border-border"
-            }`}
-          >
-            👥 Přiřadit
-          </button>
-          <button
-            onClick={() => setShowWizard(true)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground min-h-11"
-          >
-            + Nový úklid
-          </button>
+          {/* Assigning and creating tasks are online-only (D-025) — offline we
+              hide them instead of letting them fail. */}
+          {!offline && (
+            <>
+              <button
+                onClick={() => {
+                  setAssignMode(!assignMode);
+                  setPicked([]);
+                }}
+                className={`rounded-lg border px-4 py-2 text-sm font-medium min-h-11 ${
+                  assignMode ? "border-primary text-primary" : "border-border"
+                }`}
+              >
+                👥 Přiřadit
+              </button>
+              <button
+                onClick={() => setShowWizard(true)}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground min-h-11"
+              >
+                + Nový úklid
+              </button>
+            </>
+          )}
         </div>
       </div>
 
+      {offline && (
+        <OfflineNotice>
+          Odškrtávání se uloží do fronty a odešle se po připojení. Nové úklidy a
+          přiřazování počkají na síť.
+        </OfflineNotice>
+      )}
+
       {message && (
-        <p className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm">{message}</p>
+        <p className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm">
+          {message}
+        </p>
       )}
 
       {assignMode && (
@@ -192,7 +228,7 @@ export default function TasksPage() {
         </div>
       )}
 
-      {(suggestions?.items ?? []).length > 0 && (
+      {!offline && (suggestions?.items ?? []).length > 0 && (
         <section className="mb-4 rounded-card border border-border bg-surface-warm p-4">
           <h2 className="mb-2 font-semibold">🔁 Je čas znovu</h2>
           <ul className="space-y-2">
@@ -359,13 +395,19 @@ function TaskGroup({
                         ? "border-accent-green bg-accent-green/20"
                         : "border-border hover:border-accent-green"
                     }`}
-                    aria-label={isDone ? `Vrátit ${task.name}` : `Splnit ${task.name}`}
+                    aria-label={
+                      isDone ? `Vrátit ${task.name}` : `Splnit ${task.name}`
+                    }
                   >
                     {isDone ? "✓" : <span className="h-5 w-5 rounded" />}
                   </button>
                 )}
                 <span className="grow">
-                  <span className={isDone ? "text-muted-foreground line-through" : ""}>
+                  <span
+                    className={
+                      isDone ? "text-muted-foreground line-through" : ""
+                    }
+                  >
                     {task.name}
                   </span>
                   <span className="block text-xs text-muted-foreground">

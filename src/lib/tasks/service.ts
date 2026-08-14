@@ -306,32 +306,57 @@ export async function setTaskCompletion(
       })
       .where(eq(tasks.id, taskId));
 
-    if (done && task.templateId && task.status !== "done") {
-      await tx.insert(taskCompletionHistory).values({
-        id: uuidv7(),
-        householdId: actor.householdId,
-        templateId: task.templateId,
-        taskId,
-        completedAt: new Date(),
-        completedBy: actor.userId,
-      });
-    }
-    if (!done && task.templateId) {
-      // Un-ticking removes the newest history entry so the "last done" date
-      // stays truthful.
-      const [latest] = await tx
-        .select({ id: taskCompletionHistory.id })
-        .from(taskCompletionHistory)
-        .where(eq(taskCompletionHistory.taskId, taskId))
-        .orderBy(desc(taskCompletionHistory.completedAt))
-        .limit(1);
-      if (latest) {
-        await tx
-          .delete(taskCompletionHistory)
-          .where(eq(taskCompletionHistory.id, latest.id));
-      }
-    }
+    await recordCompletionHistory(actor, task, done, tx);
   });
+}
+
+type CompletionSource = {
+  id: string;
+  templateId: string | null;
+  status: "open" | "done";
+};
+/**
+ * Keeps `task_completion_history` in step with a completion change.
+ *
+ * Split out of `setTaskCompletion` because the offline push path
+ * (src/lib/sync/service.ts) updates the same column and must not silently skip
+ * the history — the "je čas znovu" suggestions read from it (D-021).
+ * `task` is the row as it looked BEFORE the change.
+ */
+export async function recordCompletionHistory(
+  actor: Actor,
+  task: CompletionSource,
+  done: boolean,
+  tx: Pick<typeof db, "select" | "insert" | "delete"> = db,
+): Promise<void> {
+  if (!task.templateId) return;
+
+  if (done && task.status !== "done") {
+    await tx.insert(taskCompletionHistory).values({
+      id: uuidv7(),
+      householdId: actor.householdId,
+      templateId: task.templateId,
+      taskId: task.id,
+      completedAt: new Date(),
+      completedBy: actor.userId,
+    });
+    return;
+  }
+  if (!done) {
+    // Un-ticking removes the newest history entry so the "last done" date
+    // stays truthful.
+    const [latest] = await tx
+      .select({ id: taskCompletionHistory.id })
+      .from(taskCompletionHistory)
+      .where(eq(taskCompletionHistory.taskId, task.id))
+      .orderBy(desc(taskCompletionHistory.completedAt))
+      .limit(1);
+    if (latest) {
+      await tx
+        .delete(taskCompletionHistory)
+        .where(eq(taskCompletionHistory.id, latest.id));
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ */

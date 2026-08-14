@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { uuidv7 } from "uuidv7";
 import { EmptyState } from "@/components/empty-state";
+import { OfflineNotice } from "@/components/offline-notice";
 import { apiFetch } from "@/lib/api/client";
 import { addDays, formatRange, startOfWeek, toDateKey } from "@/lib/dates";
+import { readShoppingListsFromMirror } from "@/lib/offline/reads";
 
 type ShoppingListSummary = {
   id: string;
@@ -23,12 +25,31 @@ export default function ShoppingPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["shopping-lists"],
-    queryFn: () =>
-      apiFetch<{ items: ShoppingListSummary[] }>("/api/shopping-lists"),
+    // Without this the shop scenario dead-ends here: the detail reads from the
+    // mirror, but there would be nothing to tap (docs/SYNC.md §6).
+    queryFn: async () => {
+      try {
+        return await apiFetch<{ items: ShoppingListSummary[] }>(
+          "/api/shopping-lists",
+        );
+      } catch (err) {
+        const mirrored = await readShoppingListsFromMirror().catch(() => null);
+        if (mirrored) return { ...mirrored, offline: true };
+        throw err;
+      }
+    },
   });
 
   const create = useMutation({
-    mutationFn: ({ name, from, to }: { name: string; from: string; to: string }) =>
+    mutationFn: ({
+      name,
+      from,
+      to,
+    }: {
+      name: string;
+      from: string;
+      to: string;
+    }) =>
       apiFetch<{ id: string }>("/api/shopping-lists", {
         method: "POST",
         json: { id: uuidv7(), name, periodStart: from, periodEnd: to },
@@ -41,18 +62,25 @@ export default function ShoppingPage() {
   });
 
   const lists = data?.items ?? [];
+  const offline = (data as { offline?: boolean } | undefined)?.offline === true;
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-3xl font-semibold">Nákup</h1>
-        <button
-          onClick={() => setCreating(true)}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground min-h-11"
-        >
-          + Nový seznam
-        </button>
+        {!offline && (
+          <button
+            onClick={() => setCreating(true)}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground min-h-11"
+          >
+            + Nový seznam
+          </button>
+        )}
       </div>
+
+      {offline && (
+        <OfflineNotice>Nový seznam se dá založit až online.</OfflineNotice>
+      )}
 
       {creating && (
         <NewListForm
@@ -111,9 +139,7 @@ function NewListForm({
   const weekEnd = addDays(weekStart, 6);
   const [from, setFrom] = useState(toDateKey(weekStart));
   const [to, setTo] = useState(toDateKey(weekEnd));
-  const [name, setName] = useState(
-    `Nákup ${formatRange(weekStart, weekEnd)}`,
-  );
+  const [name, setName] = useState(`Nákup ${formatRange(weekStart, weekEnd)}`);
 
   const input =
     "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring";

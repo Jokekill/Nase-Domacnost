@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { uuidv7 } from "uuidv7";
+import { OfflineNotice } from "@/components/offline-notice";
 import { apiFetch } from "@/lib/api/client";
 import { formatRange } from "@/lib/dates";
 import { formatScaled } from "@/lib/domain/servings";
@@ -124,11 +125,15 @@ export default function ShoppingListPage() {
     return <p className="py-16 text-center text-muted-foreground">Načítám…</p>;
   }
 
+  const offline = (list as { offline?: boolean }).offline === true;
   const open = list.items.filter((i) => !i.isChecked);
   const done = list.items.filter((i) => i.isChecked);
 
   // Group open items by store section, keeping the shop-walk order.
-  const sections = new Map<string, { name: string; order: number; items: Item[] }>();
+  const sections = new Map<
+    string,
+    { name: string; order: number; items: Item[] }
+  >();
   for (const item of open) {
     const key = item.storeSectionId ?? "none";
     if (!sections.has(key)) {
@@ -158,12 +163,16 @@ export default function ShoppingListPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setShowImport(!showImport)}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
-          >
-            ⬇︎ Naplnit
-          </button>
+          {/* Filling the list pulls from recipes and the meal plan — server
+              work, so it waits for the network. Ticking does not (D-025). */}
+          {!offline && (
+            <button
+              onClick={() => setShowImport(!showImport)}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
+            >
+              ⬇︎ Naplnit
+            </button>
+          )}
           <Link
             href="/nakup"
             className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm min-h-11"
@@ -186,29 +195,40 @@ export default function ShoppingListPage() {
         />
       )}
       {message && (
-        <p className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm">{message}</p>
+        <p className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm">
+          {message}
+        </p>
       )}
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (newItem.trim()) addItem.mutate(newItem.trim());
-        }}
-        className="mb-4 flex gap-2"
-      >
-        <input
-          value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          placeholder="Přidat položku…"
-          className="grow rounded-lg border border-border bg-surface px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground min-h-11"
+      {offline && (
+        <OfflineNotice>
+          Odškrtávání se uloží do fronty a odešle se po připojení. Přidávat a
+          mazat položky jde jen online.
+        </OfflineNotice>
+      )}
+
+      {!offline && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (newItem.trim()) addItem.mutate(newItem.trim());
+          }}
+          className="mb-4 flex gap-2"
         >
-          Přidat
-        </button>
-      </form>
+          <input
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            placeholder="Přidat položku…"
+            className="grow rounded-lg border border-border bg-surface px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground min-h-11"
+          >
+            Přidat
+          </button>
+        </form>
+      )}
 
       {orderedSections.map((section) => (
         <section key={section.name} className="mb-4">
@@ -217,7 +237,10 @@ export default function ShoppingListPage() {
           </h2>
           <ul className="overflow-hidden rounded-card border border-border bg-surface">
             {section.items.map((item) => (
-              <li key={item.id} className="border-b border-border/60 last:border-0">
+              <li
+                key={item.id}
+                className="border-b border-border/60 last:border-0"
+              >
                 <div className="flex items-center gap-3 px-3 py-2">
                   <button
                     onClick={() =>
@@ -231,7 +254,10 @@ export default function ShoppingListPage() {
                   <span className="grow">
                     {item.name}
                     {item.note && (
-                      <span className="text-muted-foreground"> ({item.note})</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        ({item.note})
+                      </span>
                     )}
                     {item.sources.length > 0 && (
                       <button
@@ -249,13 +275,15 @@ export default function ShoppingListPage() {
                   <span className="shrink-0 font-medium">
                     {formatScaled(item.amount)} {unitLabel(item.unit)}
                   </span>
-                  <button
-                    onClick={() => removeItem.mutate(item.id)}
-                    className="shrink-0 px-1 text-muted-foreground hover:text-destructive"
-                    aria-label="Odebrat"
-                  >
-                    ✕
-                  </button>
+                  {!offline && (
+                    <button
+                      onClick={() => removeItem.mutate(item.id)}
+                      className="shrink-0 px-1 text-muted-foreground hover:text-destructive"
+                      aria-label="Odebrat"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
                 {openSources === item.id && (
                   <ul className="bg-surface-warm px-4 py-2 text-xs">

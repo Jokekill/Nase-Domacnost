@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api/client";
+import { readRecipeFromMirror } from "@/lib/offline/reads";
 import type { RecipeAggregate } from "@/components/recipes/recipe-form";
 import { UNIT_LABELS, type Unit } from "@/lib/recipes/types";
 
@@ -19,7 +20,17 @@ export default function CookingModePage() {
 
   const { data: recipe } = useQuery({
     queryKey: ["recipe", id],
-    queryFn: () => apiFetch<RecipeAggregate>(`/api/recipes/${id}`),
+    // Cooking mode is the one screen that really must survive a dead wifi in
+    // the kitchen (docs/SYNC.md §6, priority 1).
+    queryFn: async () => {
+      try {
+        return await apiFetch<RecipeAggregate>(`/api/recipes/${id}`);
+      } catch (err) {
+        const mirrored = await readRecipeFromMirror(id).catch(() => null);
+        if (mirrored) return mirrored as unknown as RecipeAggregate;
+        throw err;
+      }
+    },
   });
 
   useEffect(() => {

@@ -16,6 +16,13 @@ Odchylky od původního návrhu, na které se přišlo při implementaci:
   dosazují ze session, jinak by si klient mohl přiřknout cizí identitu.
 - **Prošlý kurzor vrací 409**, ne 410 — chybové kódy aplikace mapuje
   `ApiError('conflict')`; význam (re-bootstrap) je stejný.
+- **Klient musí běžet v režimu `networkMode: "offlineFirst"`.** Ve výchozím
+  nastavení TanStack Query při `navigator.onLine === false` pozastaví dotazy
+  i mutace, takže by se záložní čtení ze zrcadla ani zápis do outboxu nikdy
+  nespustily (D-026).
+- **M:N vazby zatím nese jen `tasks`** (`assigneeIds`); u receptů se
+  `categoryIds`/`tagIds` do zrcadla neposílají, proto se offline neaplikují
+  filtry podle kategorií, štítků a skupin potravin.
 
 ---
 
@@ -161,11 +168,14 @@ outbox( opId, entity, entityId, op, payload, clientTs, state )
 Synchronizují se všechny doménové tabulky z DATA-MODEL.md kromě technických.
 Pořadí implementace ve Fázi 10:
 
-1. Čtení receptů (mirror recipes + foods + kategorie + fotky cache)
-2. `shopping_items` check/uncheck ← nejdůležitější reálný scénář
-3. `tasks` complete
-4. `diary_entries` zápis
-5. Vytvoření/editace receptu offline
+1. Čtení receptů (mirror recipes + foods + kategorie + fotky cache) — **hotovo**
+   (seznam, hledání, detail, režim vaření; fotky závisí na service workeru)
+2. `shopping_items` check/uncheck ← nejdůležitější reálný scénář — **hotovo**
+   (včetně seznamu seznamů, bez něj se offline k detailu nedá dokliknout)
+3. `tasks` complete — **hotovo** (offline splnění zapíše i historii splnění)
+4. `diary_entries` — **čtení, denní součty a mazání hotové**; zápis nového
+   záznamu zůstává online-only, protože snapshot počítá server (D-022)
+5. Vytvoření/editace receptu offline — **neděláno** (mimo push whitelist, D-025)
 
 ## 7. Testy (Vitest, povinné)
 

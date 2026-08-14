@@ -1,8 +1,9 @@
 import { and, asc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { changeLog, syncAppliedOps } from "@/db/schema";
+import { changeLog, syncAppliedOps, taskAssignees } from "@/db/schema";
 import { ApiError } from "@/lib/api/errors";
 import type { HouseholdContext } from "@/lib/auth/guards";
+import { recordCompletionHistory } from "@/lib/tasks/service";
 import {
   effectiveTimestamp,
   mergeRow,
@@ -84,7 +85,7 @@ export async function pullChanges(
   const changes: PullChange[] = [];
   for (const { table, ids } of wanted.values()) {
     const entity = SYNC_ENTITIES[table];
-    const rows = await loadRows(entity, ctx, ids);
+    const rows = await loadRows(entity, ctx, ids, table);
     for (const row of rows) {
       const op = lastOpPerRow.get(`${table}:${row.id as string}`) ?? "update";
       changes.push({ table, op, row: serialize(row) });
@@ -105,7 +106,7 @@ export async function bootstrapSnapshot(
 
   const tables: Record<string, Row[]> = {};
   for (const [name, entity] of Object.entries(SYNC_ENTITIES)) {
-    const rows = await loadRows(entity, ctx, null);
+    const rows = await loadRows(entity, ctx, null, name);
     tables[name] = rows.map(serialize);
   }
   return { tables, cursor: seq ?? 0 };
@@ -115,6 +116,7 @@ async function loadRows(
   entity: SyncEntity,
   ctx: HouseholdContext,
   ids: string[] | null,
+  name: string,
 ): Promise<Row[]> {
   const table = entity.table as unknown as Record<string, never>;
   const conditions = [eq(table.householdId, ctx.householdId as never)];
@@ -132,7 +134,7 @@ async function loadRows(
 
   // Someone else's private recipe is not part of my mirror even though it
   // lives in my household (docs/ARCHITECTURE.md §2.2).
-  return rows.filter(
+  const visible = rows.filter(
     (row) =>
       !(
         "visibility" in row &&
@@ -140,6 +142,33 @@ async function loadRows(
         row.ownerId !== ctx.user.id
       ),
   );
+
+  return withLinks(visible, name);
+}
+
+/**
+ * M:N links travel inside the parent row (docs/SYNC.md §2) — the assignment
+ * endpoints already touch the parent, so a changed link reaches change_log.
+ * Without this the offline task list cannot tell "moje" from "ostatní".
+ */
+async function withLinks(rows: Row[], name: string): Promise<Row[]> {
+  if (name !== "tasks" || rows.length === 0) return rows;
+
+  const links = await db
+    .select()
+    .from(taskAssignees)
+    .where(
+      inArray(
+        taskAssignees.taskId,
+        rows.map((row) => row.id as string),
+      ),
+    );
+  return rows.map((row) => ({
+    ...row,
+    assigneeIds: links
+      .filter((link) => link.taskId === row.id)
+      .map((link) => link.userId),
+  }));
 }
 
 /** Dates → ISO strings; everything else passes through as-is. */
@@ -282,6 +311,20 @@ async function applyOp(ctx: HouseholdContext, op: PushOp): Promise<PushResult> {
         lastModifiedBy: ctx.user.id,
       } as never)
       .where(and(...conditions));
+
+    // Ticking a task off through the outbox must leave the same trace as the
+    // online endpoint, otherwise "je čas znovu" would forget it happened.
+    if (op.entity === "tasks" && "status" in merged.updates) {
+      await recordCompletionHistory(
+        { userId: ctx.user.id, householdId: ctx.householdId },
+        {
+          id: op.entityId,
+          templateId: (current.templateId as string | null) ?? null,
+          status: current.status as "open" | "done",
+        },
+        merged.updates.status === "done",
+      );
+    }
   }
 
   const result: PushResult = {

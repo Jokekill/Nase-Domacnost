@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
 **Poslední aktualizace:** 2026-08-14
-**Aktuální fáze:** Fáze 10 — offline a PWA (jádro hotové a ověřené; zbývá dotáhnout 10.2/10.7/10.9 — viz checklist)
+**Aktuální fáze:** Fáze 10 — offline a PWA (offline čtení i zápis hotové a ověřené; zbývá jediné: potvrdit registraci service workeru a instalaci na plochu v reálném Chromu — postup níže)
 **Právě rozpracováno:** nic
-**Další krok:** dokončit offline čtení receptů a napojit úkoly/deník na outbox, ověřit service worker v reálném Chromu; pak Fáze 11 — doladění a nasazení
+**Další krok:** Vojta ověří service worker dle „Jak ověřit service worker" níže; pak Fáze 11 — doladění a nasazení
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -18,6 +18,44 @@ pnpm dev            # http://localhost:3000
 ```
 
 Testovací přihlášení: vojta@test.local / heslo123 (admin), eliska@test.local / heslo123 (člen).
+
+## Jak ověřit service worker (zbytek kroku 10.2/10.7)
+
+Vestavěný prohlížeč v Claude Code neumí načíst skript service workeru
+(`register()` skončí „unknown error occurred when fetching the script"), takže
+tohle musí projít Vojta v Chromu. Dev server service worker nemá — je potřeba
+produkční build:
+
+```bash
+NEXT_DIST_DIR=.next-prod pnpm build
+NEXT_DIST_DIR=.next-prod PORT=3100 pnpm start
+```
+
+Pozor: build přepíše `next-env.d.ts` a `tsconfig.json` odkazem na `.next-prod`
+— před commitem vrátit (`git checkout next-env.d.ts tsconfig.json`).
+
+V Chromu na `http://localhost:3100` (localhost je secure context, HTTPS není
+potřeba), přihlásit se a projít:
+
+1. **DevTools → Application → Service Workers** — má být jeden, stav
+   `activated and is running`, zdroj `/sw.js`. Pokud zůstane `installing`,
+   selhalo precachování (viz `scripts/normalize-sw-precache.mjs`).
+2. **Application → Cache Storage** — `serwist-precache-v2-…` má ~142 položek.
+3. Otevřít recept s fotkou, pak **Application → Cache Storage → recipe-photos**
+   — mají tam přibýt `/api/files/…` (to je ta LRU cache fotek z bodu 10.7).
+4. **Network → Offline** (ne vypnutá wifi, ať běží localhost), pak **F5** na
+   `/kucharka`: stránka se má načíst z cache a ukázat pruh „Offline — ukazuji
+   poslední staženou kopii" a fotky. Bez service workeru by přišel dinosaurus.
+5. **Instalace na plochu:** v adresním řádku ikona instalace (nebo ⋮ → Odeslat,
+   uložit a sdílet → Instalovat stránku jako aplikaci). Po instalaci se má
+   aplikace otevřít v samostatném okně bez adresního řádku a startovat na
+   `/kucharka` (`start_url` v manifestu).
+6. **Na telefonu** (Android Chrome přes `tailscale serve`, tedy HTTPS): totéž
+   plus „Přidat na plochu"; iOS Safari nabízí Sdílet → Přidat na plochu.
+
+Ověřeno bez prohlížeče: `/sw.js` se servíruje (200, `application/javascript`,
+~52 kB), všech 142 položek precache manifestu vrací na produkčním serveru 200,
+manifest i všechny tři ikony (192, 512, maskable) se načítají.
 Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes winget) a Docker Desktop (starší, 20.10 — funguje).
 
 ## Známé problémy / TODO
@@ -32,6 +70,8 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 - [ ] Sdílení mezi domácnostmi je připravené v datech i API, ale reálně tu je jedna domácnost (D-004). Kdyby vznikla druhá: editor sdíleného receptu vybírá potraviny ze svého vlastního katalogu — vyřešit až se to stane
 - [ ] Veřejné odkazy jsou vypnuté (`PUBLIC_SHARING_ENABLED=false`); zapnutí vyžaduje restart aplikace
 - [ ] Nutriční hodnoty v seedu jsou průměrné referenční hodnoty z veřejných tabulek — u konkrétních výrobků se mohou lišit, lze opravit v Nastavení → Potraviny
+- [ ] Produkční build s `NEXT_DIST_DIR=.next-prod` přepíše `next-env.d.ts` a `tsconfig.json` (odkazy na `.next-prod`) — před commitem `git checkout next-env.d.ts tsconfig.json`
+- [ ] Offline se nepoužijí filtry kuchařky podle kategorií, štítků a skupin potravin (vazební tabulky nejsou v zrcadle) — obrazovka to napíše; kdyby to vadilo, posílat `categoryIds`/`tagIds` v řádku receptu jako u úkolů
 
 ## Rozhodnutí, která čekají na Vojtu
 
@@ -158,14 +198,20 @@ Pozn.: dev prostředí na tomto stroji má Node 22 + pnpm 10 (instalováno přes
 ## Fáze 10 — Offline a PWA
 
 - [x] 10.1 docs/SYNC.md aktualizován o odchylky zjištěné při implementaci (bootstrap zvlášť, rozsah pushe, 409 místo 410) — hotovo 2026-08-14, D-025
-- [~] 10.2 @serwist/next + manifest + ikony + explicitní registrace SW; build i servírování ověřeno (200, application/javascript), **registraci se nepodařilo ověřit** — vestavěný prohlížeč service workery blokuje, nutné zkusit v Chromu/na telefonu
+- [~] 10.2 @serwist/next + manifest + ikony + explicitní registrace SW; build i servírování ověřeno (200, application/javascript), precache manifest ověřen položku po položce (142× 200) — **registraci a instalaci musí potvrdit Vojta v Chromu** (postup výše; vestavěný prohlížeč skript SW nenačte). Opraven windowsový build: glob dával do precache cesty s obrácenými lomítky (`/icons\icon-192.png`), ty vracejí 308 a instalace SW kvůli tomu nikdy neskončila — `scripts/normalize-sw-precache.mjs` běží po `next build`
 - [x] 10.3 Dexie mirror (20 tabulek) + outbox + evidence zahozených změn — hotovo 2026-08-14
 - [x] 10.4 GET /api/sync/pull: přírůstkově podle change_log.seq, `?bootstrap=true` pro první sync, 409 při prošlém kurzoru — ověřeno
 - [x] 10.5 POST /api/sync/push: idempotence podle opId (opakování vrátí `already_applied`), whitelist entit i polí — ověřeno
 - [x] 10.6 Konflikty: field-level LWW, clamp hodin, odškrtnutí vyhrává, delete vs. update — 16 testů + ověřeno proti živému serveru
 - [~] 10.7 Cache fotek v service workeru napsaná (CacheFirst, LRU 300 souborů); ověření čeká na 10.2. Fotky v outboxu zatím nejsou — upload je online-only
 - [x] 10.8 Indikátor v hlavičce + Nastavení → Synchronizace (fronta, poslední sync, zahozené změny) — hotovo 2026-08-14
-- [~] 10.9 Ověřeno: nákupní seznam se čte ze zrcadla bez sítě a odškrtnutí přežije výpadek (priorita 2). Čtení receptů offline (priorita 1) zatím není napojené — data v zrcadle jsou, obrazovky z něj ještě nečtou; úkoly a deník mají offline mutace v knihovně, ale obrazovky je ještě nepoužívají (priority 3–5)
+- [x] 10.9 Offline obrazovky (priority 1–4), D-026 — hotovo a ověřeno v prohlížeči 2026-08-14:
+  - **kuchařka** — seznam, hledání bez diakritiky podle názvu i ingrediencí („babovka", „vejce"), detail s nutričními hodnotami počítanými ze zrcadla (2282 kJ, shodné s online), režim vaření; zápisové akce se offline schovají
+  - **nákup** — seznam seznamů i detail ze zrcadla, odškrtnutí do fronty, po připojení odesláno (opraveno: mirror vracel `foodName`/`freeText`, obrazovka čte `name`, takže offline byly položky bez názvu)
+  - **úkoly** — moje/ostatní podle `assigneeIds` v zrcadle, splnění přes frontu; po připojení sedí `completed_by` i řádek v `task_completion_history`
+  - **deník** — záznamy, denní součty i týdenní graf ze snapshotů (1721 kJ), mazání přes frontu; zápis nového jídla zůstává online-only (D-022)
+  - klíčová oprava: `networkMode: "offlineFirst"` — TanStack Query jinak při `navigator.onLine === false` pozastaví dotazy i mutace a offline větve se vůbec nespustí
+  - priorita 5 (zakládání/editace receptu offline) se **nedělá**, je mimo push whitelist (D-025)
 
 ## Fáze 11 — Doladění
 

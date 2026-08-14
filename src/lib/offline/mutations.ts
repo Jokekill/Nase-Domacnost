@@ -44,3 +44,23 @@ export async function completeTask(
     });
   }
 }
+
+/**
+ * Deleting a diary entry. Writing a NEW entry stays online-only on purpose:
+ * the nutrition snapshot is computed on the server and never trusted from the
+ * client (D-022), and the push whitelist has no insert for `diary_entries`
+ * (D-025). `deletedAt` travels in the payload so the mirror hides the row
+ * immediately, not only after the next pull.
+ */
+export async function deleteDiaryEntry(entryId: string): Promise<void> {
+  try {
+    await enqueue(
+      "diary_entries",
+      entryId,
+      { deletedAt: new Date().toISOString() },
+      "delete",
+    );
+  } catch {
+    await apiFetch(`/api/diary/entries/${entryId}`, { method: "DELETE" });
+  }
+}

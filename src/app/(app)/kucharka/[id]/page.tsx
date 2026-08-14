@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api/client";
+import { OfflineNotice } from "@/components/offline-notice";
+import { cached, readRecipeFromMirror } from "@/lib/offline/reads";
 import type { RecipeAggregate } from "@/components/recipes/recipe-form";
 import type {
   NutritionIngredient,
@@ -62,12 +64,23 @@ export default function RecipeDetailPage() {
 
   const { data: recipe, isLoading } = useQuery({
     queryKey: ["recipe", id],
-    queryFn: () => apiFetch<Detail>(`/api/recipes/${id}`),
+    // Reading a recipe must work without signal (docs/SYNC.md §6, priority 1).
+    // The mirrored copy is read-only: editing offline is not in the push
+    // whitelist (D-025), so its `permissions` are all false.
+    queryFn: async () => {
+      try {
+        return await apiFetch<Detail>(`/api/recipes/${id}`);
+      } catch (err) {
+        const mirrored = await readRecipeFromMirror(id).catch(() => null);
+        if (mirrored) return mirrored as unknown as Detail & { offline: true };
+        throw err;
+      }
+    },
   });
 
   const { data: me } = useQuery({
     queryKey: ["me"],
-    queryFn: () => apiFetch<Me>("/api/auth/me"),
+    queryFn: () => cached("me", () => apiFetch<Me>("/api/auth/me")),
   });
 
   const remove = useMutation({
@@ -101,6 +114,7 @@ export default function RecipeDetailPage() {
     );
   }
 
+  const offline = (recipe as { offline?: boolean }).offline === true;
   const mainPhoto =
     recipe.photos.find((p) => p.isMain) ?? recipe.photos[0] ?? null;
   const meta = [
@@ -168,14 +182,16 @@ export default function RecipeDetailPage() {
               ✏️ Upravit
             </Link>
           )}
-          <button
-            onClick={() => copy.mutate()}
-            disabled={copy.isPending}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
-            title="Vytvoří vlastní kopii receptu, kterou můžeš upravovat"
-          >
-            {copy.isPending ? "Kopíruji…" : "⧉ Kopírovat"}
-          </button>
+          {!offline && (
+            <button
+              onClick={() => copy.mutate()}
+              disabled={copy.isPending}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
+              title="Vytvoří vlastní kopii receptu, kterou můžeš upravovat"
+            >
+              {copy.isPending ? "Kopíruji…" : "⧉ Kopírovat"}
+            </button>
+          )}
           {recipe.permissions?.canDelete && (
             <button
               onClick={() => {
@@ -205,6 +221,12 @@ export default function RecipeDetailPage() {
           open={shareOpen}
           onClose={() => setShareOpen(false)}
         />
+      )}
+
+      {offline && (
+        <OfflineNotice>
+          Úpravy, kopírování a sdílení počkají na síť.
+        </OfflineNotice>
       )}
 
       {copy.isError && (
@@ -282,9 +304,7 @@ export default function RecipeDetailPage() {
           <div className="mb-3 flex items-center gap-2">
             <button
               type="button"
-              onClick={() =>
-                setServings(Math.max(1, currentServings - 1))
-              }
+              onClick={() => setServings(Math.max(1, currentServings - 1))}
               className="h-11 w-11 select-none rounded-lg border border-border text-xl hover:bg-surface-warm active:bg-surface-warm"
               aria-label="Méně porcí"
             >
@@ -340,8 +360,8 @@ export default function RecipeDetailPage() {
           ))}
           {scalingWarnings.length > 0 && (
             <p className="mt-3 rounded-lg bg-surface-warm p-2.5 text-xs leading-relaxed">
-              ⚠️ Přepočet vyžaduje zaokrouhlení:{" "}
-              {scalingWarnings.join("; ")}. Zvaž úpravu.
+              ⚠️ Přepočet vyžaduje zaokrouhlení: {scalingWarnings.join("; ")}.
+              Zvaž úpravu.
             </p>
           )}
         </section>

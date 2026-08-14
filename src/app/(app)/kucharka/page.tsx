@@ -4,6 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/empty-state";
+import { OfflineNotice } from "@/components/offline-notice";
 import {
   EMPTY_FILTERS,
   FilterPanel,
@@ -11,6 +12,7 @@ import {
 } from "@/components/recipes/filter-panel";
 import { RecipeCard } from "@/components/recipes/recipe-card";
 import { apiFetch } from "@/lib/api/client";
+import { readRecipeListFromMirror } from "@/lib/offline/reads";
 import type { RecipeListResponse } from "@/lib/recipes/types";
 
 /**
@@ -103,7 +105,9 @@ export default function CookbookPage() {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: ["recipes", query, filters],
-      queryFn: ({ pageParam }) => {
+      // Cooking happens in a kitchen, sometimes without signal: fall back to
+      // the mirror (docs/SYNC.md §6, priority 1).
+      queryFn: async ({ pageParam }) => {
         const params = new URLSearchParams();
         if (query) params.set("q", query);
         if (filters.categoryId) params.set("categoryId", filters.categoryId);
@@ -116,13 +120,40 @@ export default function CookbookPage() {
         if (filters.excludeFoodCategoryId)
           params.set("excludeFoodCategoryId", filters.excludeFoodCategoryId);
         if (pageParam) params.set("cursor", pageParam);
-        return apiFetch<RecipeListResponse>(`/api/recipes?${params}`);
+        try {
+          return await apiFetch<RecipeListResponse>(`/api/recipes?${params}`);
+        } catch (err) {
+          // Paging offline would mean re-filtering the whole mirror per page;
+          // the mirror answer is complete, so there is no second page.
+          if (pageParam) throw err;
+          const mirrored = await readRecipeListFromMirror({
+            q: query,
+            difficulty: filters.difficulty,
+            maxTotalTime: filters.maxTotalTime,
+          }).catch(() => null);
+          if (!mirrored) throw err;
+          return { ...mirrored, offline: true } as RecipeListResponse & {
+            offline: true;
+          };
+        }
       },
       initialPageParam: "",
       getNextPageParam: (last) => last.nextCursor ?? undefined,
     });
 
   const items = data?.pages.flatMap((p) => p.items) ?? [];
+  const offline = data?.pages.some(
+    (page) => (page as { offline?: boolean }).offline,
+  );
+  // Everything below needs link tables that are not mirrored (D-025).
+  const droppedFilters =
+    offline &&
+    Boolean(
+      filters.categoryId ||
+      filters.tagIds.length ||
+      filters.includeFoodCategoryId ||
+      filters.excludeFoodCategoryId,
+    );
 
   return (
     <div>
@@ -160,6 +191,14 @@ export default function CookbookPage() {
       />
 
       <FilterPanel filters={filters} onChange={setFilters} />
+
+      {offline && (
+        <OfflineNotice>
+          Hledá se jen podle názvu a ingrediencí, bez tolerance překlepů.
+          {droppedFilters &&
+            " Filtry kategorií, štítků a skupin potravin teď nejdou použít."}
+        </OfflineNotice>
+      )}
 
       {pdfMode && (
         <PdfBar

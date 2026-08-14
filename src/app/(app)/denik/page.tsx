@@ -5,7 +5,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { AddEntryDialog } from "@/components/diary/add-entry-dialog";
 import { WeeklyChart } from "@/components/diary/weekly-chart";
+import { OfflineNotice } from "@/components/offline-notice";
 import { apiFetch } from "@/lib/api/client";
+import { deleteDiaryEntry } from "@/lib/offline/mutations";
+import {
+  cached,
+  readDiaryFromMirror,
+  readDiarySummaryFromMirror,
+} from "@/lib/offline/reads";
 import {
   addDays,
   formatDayLabel,
@@ -69,15 +76,49 @@ export default function DiaryPage() {
   const { data: mealTypes } = useQuery({
     queryKey: ["meal-types"],
     queryFn: () =>
-      apiFetch<{ items: { id: string; name: string }[] }>("/api/meal-types"),
+      cached("meal-types", () =>
+        apiFetch<{ items: { id: string; name: string }[] }>("/api/meal-types"),
+      ),
   });
+  // Offline both the entries and the day totals come from the mirror: the
+  // snapshots are already computed numbers, summing them is the same
+  // arithmetic the server does (docs/SYNC.md §6, priority 4).
   const { data: diary } = useQuery({
     queryKey: ["diary", from, to],
-    queryFn: () => apiFetch<{ items: Entry[] }>(`/api/diary?from=${from}&to=${to}`),
+    queryFn: async () => {
+      try {
+        return await apiFetch<{ items: Entry[] }>(
+          `/api/diary?from=${from}&to=${to}`,
+        );
+      } catch (err) {
+        const mirrored = await readDiaryFromMirror(from, to).catch(() => null);
+        if (mirrored) {
+          return { ...mirrored, offline: true } as unknown as {
+            items: Entry[];
+            offline: true;
+          };
+        }
+        throw err;
+      }
+    },
   });
   const { data: summary } = useQuery({
     queryKey: ["diary-summary", from, to],
-    queryFn: () => apiFetch<Summary>(`/api/diary/summary?from=${from}&to=${to}`),
+    queryFn: async () => {
+      try {
+        return await apiFetch<Summary>(
+          `/api/diary/summary?from=${from}&to=${to}`,
+        );
+      } catch (err) {
+        const mirrored = await readDiarySummaryFromMirror(
+          from,
+          to,
+          NUTRIENT_KEYS,
+        ).catch(() => null);
+        if (mirrored) return mirrored as unknown as Summary;
+        throw err;
+      }
+    },
   });
 
   const invalidate = async () => {
@@ -96,12 +137,34 @@ export default function DiaryPage() {
   });
 
   const removeEntry = useMutation({
-    mutationFn: (id: string) =>
-      apiFetch(`/api/diary/entries/${id}`, { method: "DELETE" }),
+    // Deleting goes through the outbox; writing a new entry stays online-only
+    // because the server computes the nutrition snapshot (D-022, D-025).
+    mutationFn: (id: string) => deleteDiaryEntry(id),
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["diary", from, to] });
+      const previous = queryClient.getQueryData<{ items: Entry[] }>([
+        "diary",
+        from,
+        to,
+      ]);
+      queryClient.setQueryData<{ items: Entry[] }>(
+        ["diary", from, to],
+        (old) =>
+          old ? { ...old, items: old.items.filter((e) => e.id !== id) } : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["diary", from, to], context.previous);
+      }
+    },
     onSuccess: invalidate,
   });
 
   const entries = diary?.items ?? [];
+  const offline =
+    (diary as { offline?: boolean } | undefined)?.offline === true;
   const goalMap = new Map(
     (summary?.goals ?? []).map((goal) => [goal.nutrientKey, goal.targetPerDay]),
   );
@@ -116,36 +179,52 @@ export default function DiaryPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-3xl font-semibold">Deník</h1>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setShowGoals(!showGoals)}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium min-h-11"
-          >
-            🎯 Cíle
-          </button>
-          <button
-            onClick={() => setShowImport(!showImport)}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium min-h-11"
-          >
-            📅 Z jídelníčku
-          </button>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground min-h-11"
-          >
-            + Zapsat
-          </button>
+          {/* Everything that writes a new entry needs the server (D-022). */}
+          {!offline && (
+            <>
+              <button
+                onClick={() => setShowGoals(!showGoals)}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium min-h-11"
+              >
+                🎯 Cíle
+              </button>
+              <button
+                onClick={() => setShowImport(!showImport)}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium min-h-11"
+              >
+                📅 Z jídelníčku
+              </button>
+              <button
+                onClick={() => setShowAdd(true)}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground min-h-11"
+              >
+                + Zapsat
+              </button>
+            </>
+          )}
         </div>
       </div>
 
+      {offline && (
+        <OfflineNotice>
+          Zapisovat nové jídlo jde jen online — hodnoty počítá server, aby
+          seděly. Mazání se uloží do fronty.
+        </OfflineNotice>
+      )}
+
       {message && (
-        <p className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm">{message}</p>
+        <p className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm">
+          {message}
+        </p>
       )}
 
       {showGoals && (
         <GoalsPanel
           goals={summary?.goals ?? []}
           onSaved={async () => {
-            await queryClient.invalidateQueries({ queryKey: ["diary-summary"] });
+            await queryClient.invalidateQueries({
+              queryKey: ["diary-summary"],
+            });
           }}
         />
       )}
@@ -232,7 +311,9 @@ export default function DiaryPage() {
                 key={key}
                 className="flex justify-between border-b border-border/60 py-1"
               >
-                <dt className="text-muted-foreground">{NUTRIENT_LABELS[key]}</dt>
+                <dt className="text-muted-foreground">
+                  {NUTRIENT_LABELS[key]}
+                </dt>
                 <dd className="font-medium">
                   {formatNutrient(key, value)}
                   {goal != null && (
@@ -355,7 +436,9 @@ export default function DiaryPage() {
                 key={key}
                 className="flex justify-between border-b border-border/60 py-1"
               >
-                <dt className="text-muted-foreground">{NUTRIENT_LABELS[key]}</dt>
+                <dt className="text-muted-foreground">
+                  {NUTRIENT_LABELS[key]}
+                </dt>
                 <dd className="font-medium">
                   {formatNutrient(key, summary?.averages[key])}{" "}
                   {NUTRIENT_UNITS[key]}
@@ -386,7 +469,9 @@ function GoalsPanel({
   onSaved: () => void;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(goals.map((g) => [g.nutrientKey, String(g.targetPerDay)])),
+    Object.fromEntries(
+      goals.map((g) => [g.nutrientKey, String(g.targetPerDay)]),
+    ),
   );
   const [saving, setSaving] = useState(false);
 
