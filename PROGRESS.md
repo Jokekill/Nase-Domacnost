@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
-**Poslední aktualizace:** 2026-08-14
-**Aktuální fáze:** Fáze 11 — doladění a nasazení (hotovo vše kromě 11.5)
+**Poslední aktualizace:** 2026-10-28
+**Aktuální fáze:** všechny fáze 0–11 hotové; aplikace běží na Raspberry Pi za Tailscale
 **Právě rozpracováno:** nic
-**Další krok:** na Vojtovi — nasadit na Pi dle docs/DEPLOY.md (11.5) a zkontrolovat service worker v Chromu (10.2/10.7, postup níže)
+**Další krok:** nic povinného. Nedodělky jsou v „Známé problémy / TODO" a v „Co není naprogramované" níže; největší z nich je chybějící UI pro správu číselníků
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -61,9 +61,9 @@ manifest i všechny tři ikony (192, 512, maskable) se načítají.
 ## Známé problémy / TODO
 
 - [ ] `pnpm build` lokálně na Windows běží bez `output: 'standalone'` (symlink EPERM); Docker build nastaví `BUILD_STANDALONE=1` — viz next.config.ts
-- [ ] HEIC upload fotek — ověřit podporu sharp/libheif v Docker buildu (Fáze 2)
+- [ ] HEIC upload fotek — sharp v produkčním obrazu HEIC na vstupu umí (libvips 8.18.3, ověřeno 2026-10-28); zbývá zkusit reálnou fotkou z iPhonu
 - [ ] SMTP pro reset hesla zatím chybí — odkaz se loguje do konzole serveru (záměr, viz ARCHITECTURE.md §1.3)
-- [ ] CI workflow (.github/workflows/ci.yml) je připravený, ale repo nemá GitHub remote — aktivuje se až po pushnutí
+- [ ] CI workflow (.github/workflows/ci.yml) by měl po pushnutí na github.com/Jokekill/Nase-Domacnost běžet — zkontrolovat v záložce Actions, že `build` i `e2e` job prochází (lokálně prochází oboje)
 - [ ] Skener čárových kódů potřebuje HTTPS (secure context) — na notebooku funguje jen přes localhost, na Pi to zajistí `tailscale serve`
 - [ ] Export ZIP obsahuje hashe hesel a osobní deníky všech členů — chránit soubor jako heslo (viz docs/EXPORT-FORMAT.md §3); lze vypnout přepínačem
 - [ ] Vizuální kontrola vygenerovaného PDF zatím na Vojtovi — tento stroj nemá rastrovač PDF (poppler), ověřeno jen strukturálně (vložené fonty, ToUnicode s diakritikou)
@@ -72,6 +72,21 @@ manifest i všechny tři ikony (192, 512, maskable) se načítají.
 - [ ] Nutriční hodnoty v seedu jsou průměrné referenční hodnoty z veřejných tabulek — u konkrétních výrobků se mohou lišit, lze opravit v Nastavení → Potraviny
 - [ ] Produkční build s `NEXT_DIST_DIR=.next-prod` přepíše `next-env.d.ts` a `tsconfig.json` (odkazy na `.next-prod`) — před commitem `git checkout next-env.d.ts tsconfig.json`
 - [ ] Offline se nepoužijí filtry kuchařky podle kategorií, štítků a skupin potravin (vazební tabulky nejsou v zrcadle) — obrazovka to napíše; kdyby to vadilo, posílat `categoryIds`/`tagIds` v řádku receptu jako u úkolů
+
+## Co není naprogramované (stav 2026-10-28)
+
+Checklist fází 0–11 je hotový. Tyhle věci vědomě chybí:
+
+- [ ] **Správa číselníků v UI** — největší mezera. API je hotové (vytvoření, přesun ve stromu s ochranou proti cyklům, mazání), ale žádná obrazovka na: kategorie receptů, skupiny potravin, sekce obchodu a jejich pořadí, typy jídel, seznamy úkolů, šablony úklidu a skupiny šablon, přejmenování/mazání štítků. Seed naplní 17 kategorií, 44 skupin potravin, 8 sekcí, 5 typů jídel a 20 šablon, takže to funguje — ale přidat si vlastní kategorii nebo přeskládat sekce podle svého obchodu jde dnes jen přes API. Výjimka: potraviny a převody jednotek plnou správu mají, štítek se dá vytvořit přímo v editoru receptu
+- [ ] Offline zakládání a editace receptu (priorita 5 v docs/SYNC.md) — mimo push whitelist (D-025)
+- [ ] Upload fotek offline — fronta fotek jako blob v IndexedDB (docs/SYNC.md §5); upload je online-only
+- [ ] Zápis nového záznamu do deníku offline — snapshot počítá server (D-022); offline jde číst, sčítat a mazat
+- [ ] SMTP pro reset hesla — odkaz se loguje do konzole serveru (`docker compose logs app`)
+- [ ] zxing-js fallback skeneru čárových kódů pro iOS — tam je ruční zadání kódu
+- [ ] Mobilní bottom-sheet varianta filtrů kuchařky — panel je zatím responzivní
+- [ ] Offline filtry kuchařky podle kategorií, štítků a skupin potravin — vazební tabulky nejsou v zrcadle
+
+Záměrně se nedělá: více domácností (D-004), PDF s nutričními hodnotami (D-024), veřejné odkazy jsou hotové, jen vypnuté flagem.
 
 ## Rozhodnutí, která čekají na Vojtu
 
@@ -220,6 +235,6 @@ manifest i všechny tři ikony (192, 512, maskable) se načítají.
 - [x] 11.2 Přístupnost — `useDialog` ve všech čtyřech modálech (role dialog, aria-modal, Escape, fokus dovnitř/past/návrat na spouštěč; ověřeno v prohlížeči i Playwrightem), odkaz „Přeskočit na obsah", popisky u výběru veličiny a nahrání ZIPu, karta receptu z h3 na h2, `role="status"` u hlášek, mluvící `aria-label` u týdenního grafu. Kontrast (WCAG AA) přepočítán na všech hlavních obrazovkách ve světlém i tmavém režimu — bez nálezu — hotovo 2026-08-14
 - [x] 11.3 Testy — 151 jednotkových (nově 21 nad offline zrcadlem přes `fake-indexeddb`) + Playwright smoke: 6 scénářů × Chrome a Pixel, přihlášení jednou přes `storageState` (jinak narazí na vlastní rate limit). CI má nový `e2e` job s Postgresem, migrací, seedem a produkčním serverem — hotovo 2026-08-14
 - [x] 11.4 Docker obraz (Debian slim kvůli sharp, standalone, healthcheck, uid 1001), `migrate` jako jednorázová služba, `app` v compose, docs/DEPLOY.md; **amd64** obraz ověřen celou smoke suitou (7/7), **arm64** obraz postaven přes buildx (16 min pod emulací, 349 MB) a ověřen během: health OK, přihlášení 200, výpis receptů 200, bootstrap synchronizace 200 — hotovo 2026-08-14, D-027
-- [ ] 11.5 Nasazení na Raspberry Pi 5 + Tailscale — **na Vojtovi**, postup v docs/DEPLOY.md
+- [x] 11.5 Nasazení na Raspberry Pi 5 + Tailscale — hotovo 2026-10-28, hlásí Vojta: běží ze stavu commitu dd37dbc (github.com/Jokekill/Nase-Domacnost), dostupné odkudkoli přes Tailscale
 - [x] 11.6 Obnova ze zálohy na čisté instalaci — ověřeno: `pg_restore` denního dumpu do prázdné databáze (45 tabulek, shodné počty), produkční obraz nad obnovenou databází naběhl, přihlášení i výpis receptů fungují, archiv fotek obsahuje 19 položek — hotovo 2026-08-14
 - [x] 11.7 Dokumentace — README.md (co to umí, rychlý start, rozcestník) a docs/DEPLOY.md; PROGRESS a DECISIONS průběžně — hotovo 2026-08-14
