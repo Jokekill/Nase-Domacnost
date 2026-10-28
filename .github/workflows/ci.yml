@@ -9,11 +9,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # `next build` načítá API routy, a ty se o databázi opřou hned při importu.
+      # Nikdo se na ni nepřipojuje, jen musí být nastavená (stejně jako v Dockerfile).
+      DATABASE_URL: postgres://build:build@127.0.0.1:5432/build
     steps:
       - uses: actions/checkout@v4
+      # Verzi bere z "packageManager" v package.json — uvedená i tady by
+      # skončila na "Multiple versions of pnpm specified".
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -46,9 +50,9 @@ jobs:
       E2E_BASE_URL: http://127.0.0.1:3000
     steps:
       - uses: actions/checkout@v4
+      # Verzi bere z "packageManager" v package.json — uvedená i tady by
+      # skončila na "Multiple versions of pnpm specified".
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22

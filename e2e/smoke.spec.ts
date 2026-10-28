@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { createShoppingItem, deleteShoppingItem } from "./fixtures";
 
 /**
  * The paths that must never be broken: getting in, finding a recipe, cooking
@@ -34,7 +35,9 @@ test("detail receptu ukáže ingredience, přepočet porcí a nutriční hodnoty
   await expect(
     page.getByRole("heading", { name: "Ingredience" }),
   ).toBeVisible();
-  await expect(page.getByText("Nutriční hodnoty")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Nutriční hodnoty" }),
+  ).toBeVisible();
 
   // The stepper label, not the "12 porcí · 1:15 h · snadné" subtitle.
   const servings = page.locator("span").filter({ hasText: /^\d+ porcí$/ });
@@ -62,37 +65,32 @@ test("režim vaření projde krokem a vrátí se zpět", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("odškrtnutí položky v nákupu se projeví a přežije nové načtení", async ({
+test("odškrtnutí položky v nákupu dojde na server a přežije nové načtení", async ({
   page,
 }) => {
-  await page.goto("/nakup");
+  const { listId, itemId, name } = await createShoppingItem(page.request);
+  const checkedOnServer = async () => {
+    const detail = await page.request
+      .get(`/api/shopping-lists/${listId}`)
+      .then((r) => r.json());
+    return detail.items.find((i: { id: string }) => i.id === itemId)?.isChecked;
+  };
+
+  await page.goto(`/nakup/${listId}`);
+  await page.getByRole("button", { name: `Odškrtnout ${name}` }).click();
+
+  // Optimistic first, then the real proof: the outbox got it to the server.
   await expect(
-    page.getByRole("heading", { name: "Nákup", level: 1 }),
+    page.getByRole("button", { name: `Vrátit ${name}` }),
   ).toBeVisible();
-  const list = page.locator('a[href^="/nakup/"]').first();
-  await expect(list).toBeVisible();
-  await list.click();
-
-  const tick = page.getByRole("button", { name: /^Odškrtnout / }).first();
-  await expect(tick).toBeVisible();
-  const name = (await tick.getAttribute("aria-label"))!.replace(
-    "Odškrtnout ",
-    "",
-  );
-
-  await tick.click();
-  const back = page.getByRole("button", { name: `Vrátit ${name}` });
-  await expect(back).toBeVisible();
+  await expect.poll(checkedOnServer).toBe(true);
 
   await page.reload();
   await expect(
     page.getByRole("button", { name: `Vrátit ${name}` }),
   ).toBeVisible();
-  // Leave the list as it was found.
-  await page.getByRole("button", { name: `Vrátit ${name}` }).click();
-  await expect(
-    page.getByRole("button", { name: `Odškrtnout ${name}` }),
-  ).toBeVisible();
+
+  await deleteShoppingItem(page.request, itemId);
 });
 
 test("hlavní obrazovky odpovídají a mají nadpis", async ({ page }) => {

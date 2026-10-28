@@ -63,7 +63,7 @@ manifest i všechny tři ikony (192, 512, maskable) se načítají.
 - [ ] `pnpm build` lokálně na Windows běží bez `output: 'standalone'` (symlink EPERM); Docker build nastaví `BUILD_STANDALONE=1` — viz next.config.ts
 - [ ] HEIC upload fotek — sharp v produkčním obrazu HEIC na vstupu umí (libvips 8.18.3, ověřeno 2026-10-28); zbývá zkusit reálnou fotkou z iPhonu
 - [ ] SMTP pro reset hesla zatím chybí — odkaz se loguje do konzole serveru (záměr, viz ARCHITECTURE.md §1.3)
-- [ ] CI workflow (.github/workflows/ci.yml) by měl po pushnutí na github.com/Jokekill/Nase-Domacnost běžet — zkontrolovat v záložce Actions, že `build` i `e2e` job prochází (lokálně prochází oboje)
+- [x] ~~CI workflow~~ — první běh na GitHubu spadl na třech věcech, opraveno 2026-10-28: `pnpm/action-setup` dostával verzi dvakrát (z workflow i z `packageManager`), `next build` neměl `DATABASE_URL` (API routy sahají na databázi už při importu) a e2e testy stály na datech, která seed nevytváří. Ověřeno lokálně proti čisté databázi (migrace → seed → produkční build → 15/15 testů)
 - [ ] Skener čárových kódů potřebuje HTTPS (secure context) — na notebooku funguje jen přes localhost, na Pi to zajistí `tailscale serve`
 - [ ] Export ZIP obsahuje hashe hesel a osobní deníky všech členů — chránit soubor jako heslo (viz docs/EXPORT-FORMAT.md §3); lze vypnout přepínačem
 - [ ] Vizuální kontrola vygenerovaného PDF zatím na Vojtovi — tento stroj nemá rastrovač PDF (poppler), ověřeno jen strukturálně (vložené fonty, ToUnicode s diakritikou)
