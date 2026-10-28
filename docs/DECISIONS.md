@@ -4,6 +4,18 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-028 — Kuchařka začíná kapitolami, pořadí a skrývání patří domácnosti (2026-10-28)
+
+**Co:** Kuchařka se otevírá na kapitolách (kategoriích), ne na hromadě receptů — jako tištěná kniha, kde nejdřív vybereš, kde hledat. Klik na kapitolu ukáže recepty z ní **včetně podkategorií**, podkapitoly jsou nahoře jako čipy na zúžení. Dvě dlaždice navíc: „Všechny recepty" (původní obrazovka se všemi filtry) a „Bez kategorie", která se objeví, jen když nějaké nezařazené recepty jsou.
+- **Hledání kapitoly přeskakuje.** Jakmile něco napíšeš do pole na úvodu, kapitoly ustoupí a hledá se napříč celou kuchařkou — recept nejde hledat v kapitole, kterou jsi ještě nenašel. Vyhledávací pole proto zůstává na stránce, ne uvnitř seznamu: komponenta, která se při psaní odpojí, by ztratila fokus.
+- **Pořadí a skrývání jsou společné pro domácnost** (Vojtovo rozhodnutí): pořadí jede přes `categories.sort_order`, který v tabulce už byl, skrývání přes nový sloupec `is_hidden` (migrace 0014). Osobní varianta přes `users.preferences` by znemožnila domluvu („mám to třetí odshora").
+- **Skrytí je záměrně slabé:** kapitola jen zmizí z úvodu. Recepty v ní se dál najdou hledáním i filtrem a kapitola zůstává v nabídce při úpravě receptu — skrytí nesmí nic ztratit.
+- **Řazení šipkami, ne tažením.** Tažení je na telefonu mizerné a z klávesnice nedostupné; šipky fungují všude (§11.2). Posun zapíše **celé nové pořadí** jednou operací, takže jeden neúspěšný požadavek nenechá polovinu pořadí přeházenou. Změny v editoru se projeví okamžitě (optimisticky) a při chybě se vezme zpět serverová verze.
+- **Správa kapitol v témže režimu:** přidání, přejmenování (klepnutím na název), zařazení pod jinou kapitolu a mazání. Mazání dál brání server, když kapitolu používají recepty nebo má podkapitoly — raději hlášku než tiché přeřazení.
+- **Offline:** aby kapitoly fungovaly bez sítě, nese teď zrcadlený recept i své `categoryIds` a `tagIds` (docs/SYNC.md §2, stejný princip jako `assigneeIds` u úkolů). Tím zmizela i známá mezera, že offline nešlo filtrovat podle kategorie.
+**Proč:** Zadání §5.1 a Vojtovo zadání z 2026-10-28. Ověřeno v prohlížeči: kapitoly s počty včetně podstromu (Hlavní jídla = 2 přes Masitá a Luštěninová), proklik na kapitolu i podkapitolu, hledání, skrytí a návrat, přejmenování, přidání i mazání (včetně odmítnutí u kapitoly s recepty), a totéž offline ze zrcadla se shodnými počty. 7 jednotkových testů nad zrcadlem a 3 e2e scénáře navíc.
+**Alternativy:** Dvě úrovně proklikávání (kapitola → podkapitola → recepty) — u dvouúrovňového stromu zbytečné klikání navíc; plochý seznam všech 17 kategorií — ztrácí hierarchii; osobní pořadí pro každého — viz výše.
+
 ## D-027 — Doladění a nasazení: obraz bez zdrojáků, migrace vlastní službou, smoke testy se přihlašují jednou (2026-08-14)
 
 **Co:** Rozhodnutí Fáze 11.

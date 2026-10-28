@@ -134,3 +134,25 @@ export async function deleteShoppingItem(
 ): Promise<void> {
   await api.delete(`/api/shopping-items/${itemId}`);
 }
+
+/** A chapter of its own to play with, so a test never touches a real one. */
+export async function createChapter(
+  api: APIRequestContext,
+): Promise<{ id: string; name: string }> {
+  const chapterId = id();
+  const name = `Kapitola ${chapterId.slice(0, 8)}`;
+  const response = await api.post("/api/categories", {
+    data: { id: chapterId, name, parentId: null, sortOrder: 999 },
+  });
+  if (!response.ok()) {
+    throw new Error(`Kapitolu se nepodařilo založit: ${await response.text()}`);
+  }
+  return { id: chapterId, name };
+}
+
+export async function deleteChapter(
+  api: APIRequestContext,
+  chapterId: string,
+): Promise<void> {
+  await api.delete(`/api/categories/${chapterId}`);
+}

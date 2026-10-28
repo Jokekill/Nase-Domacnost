@@ -1,7 +1,7 @@
 # STAV PROJEKTU
 
 **Poslední aktualizace:** 2026-10-28
-**Aktuální fáze:** všechny fáze 0–11 hotové; aplikace běží na Raspberry Pi za Tailscale
+**Aktuální fáze:** všechny fáze 0–11 hotové; aplikace běží na Raspberry Pi za Tailscale. Průběžné úpravy viz „Po nasazení" níže
 **Právě rozpracováno:** nic
 **Další krok:** nic povinného. Nedodělky jsou v „Známé problémy / TODO" a v „Co není naprogramované" níže; největší z nich je chybějící UI pro správu číselníků
 
@@ -71,13 +71,17 @@ manifest i všechny tři ikony (192, 512, maskable) se načítají.
 - [ ] Veřejné odkazy jsou vypnuté (`PUBLIC_SHARING_ENABLED=false`); zapnutí vyžaduje restart aplikace
 - [ ] Nutriční hodnoty v seedu jsou průměrné referenční hodnoty z veřejných tabulek — u konkrétních výrobků se mohou lišit, lze opravit v Nastavení → Potraviny
 - [ ] Produkční build s `NEXT_DIST_DIR=.next-prod` přepíše `next-env.d.ts` a `tsconfig.json` (odkazy na `.next-prod`) — před commitem `git checkout next-env.d.ts tsconfig.json`
-- [ ] Offline se nepoužijí filtry kuchařky podle kategorií, štítků a skupin potravin (vazební tabulky nejsou v zrcadle) — obrazovka to napíše; kdyby to vadilo, posílat `categoryIds`/`tagIds` v řádku receptu jako u úkolů
+- [ ] Offline se nepoužijí filtry kuchařky podle štítků a skupin potravin (vazební tabulky nejsou v zrcadle) — obrazovka to napíše. Kategorie už offline fungují (D-028)
+
+## Po nasazení
+
+- [x] **Kuchařka od kapitol** (2026-10-28, D-028) — úvod ukazuje kapitoly s počty a obálkami místo hromady receptů; klik vede na recepty kapitoly včetně podkategorií (ty jsou nahoře jako čipy). Přibyly dlaždice „Všechny recepty" a „Bez kategorie", hledání kapitoly přeskakuje. Nový režim **⚙︎ Kapitoly**: řazení šipkami, skrývání z úvodu, přejmenování, přidání, mazání i zařazení pod jinou kapitolu — pořadí a skrývání platí pro celou domácnost. Funguje i offline (zrcadlo nově nese u receptu `categoryIds`). Migrace 0014 přidala `categories.is_hidden`
 
 ## Co není naprogramované (stav 2026-10-28)
 
 Checklist fází 0–11 je hotový. Tyhle věci vědomě chybí:
 
-- [ ] **Správa číselníků v UI** — největší mezera. API je hotové (vytvoření, přesun ve stromu s ochranou proti cyklům, mazání), ale žádná obrazovka na: kategorie receptů, skupiny potravin, sekce obchodu a jejich pořadí, typy jídel, seznamy úkolů, šablony úklidu a skupiny šablon, přejmenování/mazání štítků. Seed naplní 17 kategorií, 44 skupin potravin, 8 sekcí, 5 typů jídel a 20 šablon, takže to funguje — ale přidat si vlastní kategorii nebo přeskládat sekce podle svého obchodu jde dnes jen přes API. Výjimka: potraviny a převody jednotek plnou správu mají, štítek se dá vytvořit přímo v editoru receptu
+- [ ] **Správa zbývajících číselníků v UI** — kategorie receptů už správu mají (D-028), potraviny a převody jednotek taky. Pořád chybí obrazovka na: skupiny potravin, **sekce obchodu a jejich pořadí**, typy jídel, seznamy úkolů, šablony úklidu a skupiny šablon, přejmenování/mazání štítků. API je u všech hotové, seed je naplní, ale vlastní úpravy jdou dnes jen přes API
 - [ ] Offline zakládání a editace receptu (priorita 5 v docs/SYNC.md) — mimo push whitelist (D-025)
 - [ ] Upload fotek offline — fronta fotek jako blob v IndexedDB (docs/SYNC.md §5); upload je online-only
 - [ ] Zápis nového záznamu do deníku offline — snapshot počítá server (D-022); offline jde číst, sčítat a mazat

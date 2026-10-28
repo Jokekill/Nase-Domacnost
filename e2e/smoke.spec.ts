@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { createShoppingItem, deleteShoppingItem } from "./fixtures";
+import {
+  createChapter,
+  createShoppingItem,
+  deleteChapter,
+  deleteShoppingItem,
+} from "./fixtures";
 
 /**
  * The paths that must never be broken: getting in, finding a recipe, cooking
@@ -7,26 +12,70 @@ import { createShoppingItem, deleteShoppingItem } from "./fixtures";
  * seeded test household (`pnpm db:seed`).
  */
 
-test("kuchařka se načte a hledání najde recept bez diakritiky", async ({
-  page,
-}) => {
+test("kuchařka otevře kapitoly, ne hromadu receptů", async ({ page }) => {
   await page.goto("/kucharka");
   await expect(page.getByRole("heading", { name: "Kuchařka" })).toBeVisible();
 
+  // Chapters first (§5.1): no recipe card until you pick where to look.
+  await expect(
+    page.getByRole("heading", { name: "Všechny recepty" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /bábovka/i })).toHaveCount(0);
+
+  await page.getByRole("link", { name: /Všechny recepty/ }).click();
+  await expect(page.getByRole("heading", { name: /bábovka/i })).toBeVisible();
+});
+
+test("hledání na úvodu přeskočí kapitoly a najde recept bez diakritiky", async ({
+  page,
+}) => {
+  await page.goto("/kucharka");
   const card = page.getByRole("heading", { name: /bábovka/i }).first();
-  await expect(card).toBeVisible();
 
   await page.getByPlaceholder(/hledat recept/i).fill("babovka");
   await expect(card).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Všechny recepty" }),
+  ).toHaveCount(0);
 
   await page.getByPlaceholder(/hledat recept/i).fill("neexistujicijidlo");
   await expect(page.getByText(/nic nenalezeno/i)).toBeVisible();
+
+  // Emptying the box brings the chapters back.
+  await page.getByPlaceholder(/hledat recept/i).fill("");
+  await expect(
+    page.getByRole("heading", { name: "Všechny recepty" }),
+  ).toBeVisible();
+});
+
+test("kapitolu jde skrýt z úvodu a zase vrátit", async ({ page }) => {
+  const { id, name } = await createChapter(page.request);
+  try {
+    await page.goto("/kucharka");
+    const tile = page.getByRole("heading", { name });
+    await expect(tile).toBeVisible();
+
+    await page.getByRole("button", { name: /Kapitoly/ }).click();
+    const row = page.locator("li").filter({ hasText: name });
+    await row.getByRole("checkbox").click();
+    await expect(row.getByText(/skrytá/)).toBeVisible();
+
+    await page.getByRole("button", { name: "Hotovo" }).first().click();
+    await expect(tile).toHaveCount(0);
+
+    await page.getByRole("button", { name: /Kapitoly/ }).click();
+    await row.getByRole("checkbox").click();
+    await page.getByRole("button", { name: "Hotovo" }).first().click();
+    await expect(tile).toBeVisible();
+  } finally {
+    await deleteChapter(page.request, id);
+  }
 });
 
 test("detail receptu ukáže ingredience, přepočet porcí a nutriční hodnoty", async ({
   page,
 }) => {
-  await page.goto("/kucharka");
+  await page.goto("/kucharka/kategorie/vse");
   await page
     .getByRole("heading", { name: /bábovka/i })
     .first()
@@ -49,7 +98,7 @@ test("detail receptu ukáže ingredience, přepočet porcí a nutriční hodnoty
 });
 
 test("režim vaření projde krokem a vrátí se zpět", async ({ page }) => {
-  await page.goto("/kucharka");
+  await page.goto("/kucharka/kategorie/vse");
   await page
     .getByRole("heading", { name: /bábovka/i })
     .first()

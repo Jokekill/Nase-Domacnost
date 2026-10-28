@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { MIRROR_TABLES, offlineDb, type MirrorRow } from "./db";
 import {
   normalize,
+  readCookbookOverviewFromMirror,
   readDiaryFromMirror,
   readDiarySummaryFromMirror,
   readRecipeFromMirror,
@@ -46,6 +47,7 @@ describe("readRecipeListFromMirror", () => {
     {
       id: "r1",
       title: "Babiččina bábovka",
+      categoryIds: ["c-bunty"],
       intro: "Nedělní klasika",
       baseServings: 12,
       totalTimeMin: 75,
@@ -56,6 +58,7 @@ describe("readRecipeListFromMirror", () => {
     {
       id: "r2",
       title: "Čočková polévka",
+      categoryIds: ["c-polevky"],
       intro: null,
       baseServings: 4,
       totalTimeMin: 30,
@@ -80,6 +83,32 @@ describe("readRecipeListFromMirror", () => {
       recipe_ingredients: [
         { id: "i1", recipeId: "r1", foodId: "f1", deletedAt: null },
         { id: "i2", recipeId: "r2", freeText: "voda", deletedAt: null },
+      ],
+      categories: [
+        {
+          id: "c-dezerty",
+          name: "Dezerty",
+          parentId: null,
+          sortOrder: 1,
+          isHidden: false,
+          deletedAt: null,
+        },
+        {
+          id: "c-bunty",
+          name: "Koláče a buchty",
+          parentId: "c-dezerty",
+          sortOrder: 0,
+          isHidden: false,
+          deletedAt: null,
+        },
+        {
+          id: "c-polevky",
+          name: "Polévky",
+          parentId: null,
+          sortOrder: 0,
+          isHidden: true,
+          deletedAt: null,
+        },
       ],
       recipe_photos: [
         {
@@ -146,6 +175,133 @@ describe("readRecipeListFromMirror", () => {
   it("picks the main photo, not merely the first one", async () => {
     const { items } = await readRecipeListFromMirror({ q: "babovka" });
     expect(items[0].mainPhotoKey).toBe("b");
+  });
+
+  it("filters by chapter including its subcategories", async () => {
+    // The cake sits in a subcategory, so the parent chapter must find it.
+    expect(
+      (await readRecipeListFromMirror({ categoryId: "c-dezerty" })).items.map(
+        (i) => i.id,
+      ),
+    ).toEqual(["r1"]);
+    expect(
+      (await readRecipeListFromMirror({ categoryId: "c-bunty" })).items.map(
+        (i) => i.id,
+      ),
+    ).toEqual(["r1"]);
+    expect(
+      (await readRecipeListFromMirror({ categoryId: "c-polevky" })).items.map(
+        (i) => i.id,
+      ),
+    ).toEqual(["r2"]);
+  });
+
+  it("can list only what is filed nowhere", async () => {
+    const { items } = await readRecipeListFromMirror({ uncategorised: true });
+    expect(items).toEqual([]);
+  });
+});
+
+describe("readCookbookOverviewFromMirror", () => {
+  beforeEach(async () => {
+    await seed({
+      categories: [
+        {
+          id: "c-dezerty",
+          name: "Dezerty",
+          parentId: null,
+          sortOrder: 1,
+          isHidden: false,
+          deletedAt: null,
+        },
+        {
+          id: "c-bunty",
+          name: "Koláče a buchty",
+          parentId: "c-dezerty",
+          sortOrder: 0,
+          isHidden: false,
+          deletedAt: null,
+        },
+        {
+          id: "c-polevky",
+          name: "Polévky",
+          parentId: null,
+          sortOrder: 0,
+          isHidden: true,
+          deletedAt: null,
+        },
+      ],
+      recipes: [
+        {
+          id: "r1",
+          title: "Bábovka",
+          categoryIds: ["c-bunty"],
+          createdAt: "2026-08-01T10:00:00.000Z",
+          deletedAt: null,
+        },
+        {
+          id: "r2",
+          title: "Nezařazený",
+          categoryIds: [],
+          createdAt: "2026-08-02T10:00:00.000Z",
+          deletedAt: null,
+        },
+        {
+          id: "r3",
+          title: "Smazaný",
+          categoryIds: ["c-bunty"],
+          createdAt: "2026-08-03T10:00:00.000Z",
+          deletedAt: "2026-08-04T10:00:00.000Z",
+        },
+      ],
+      recipe_photos: [
+        {
+          id: "p1",
+          recipeId: "r1",
+          storageKey: "cover",
+          isMain: true,
+          sortOrder: 0,
+          deletedAt: null,
+        },
+      ],
+    });
+  });
+
+  it("counts a chapter including its subcategories, ignoring deleted recipes", async () => {
+    const { chapters } = await readCookbookOverviewFromMirror();
+    const byId = new Map(chapters.map((c) => [c.id, c]));
+    expect(byId.get("c-dezerty")!.recipeCount).toBe(1);
+    expect(byId.get("c-bunty")!.recipeCount).toBe(1);
+    expect(byId.get("c-polevky")!.recipeCount).toBe(0);
+  });
+
+  it("keeps hidden chapters in the list and says so", async () => {
+    const { chapters } = await readCookbookOverviewFromMirror();
+    // The screen hides them; the editor still has to be able to show them.
+    expect(chapters.find((c) => c.id === "c-polevky")!.isHidden).toBe(true);
+    expect(chapters.find((c) => c.id === "c-dezerty")!.isHidden).toBe(false);
+  });
+
+  it("takes the cover from a recipe in the chapter", async () => {
+    const { chapters } = await readCookbookOverviewFromMirror();
+    expect(chapters.find((c) => c.id === "c-dezerty")!.coverPhotoKey).toBe(
+      "cover",
+    );
+    expect(
+      chapters.find((c) => c.id === "c-polevky")!.coverPhotoKey,
+    ).toBeNull();
+  });
+
+  it("counts the totals the two extra tiles show", async () => {
+    const overview = await readCookbookOverviewFromMirror();
+    expect(overview.totalRecipes).toBe(2);
+    expect(overview.uncategorisedRecipes).toBe(1);
+  });
+
+  it("orders chapters by the household's own order", async () => {
+    const { chapters } = await readCookbookOverviewFromMirror();
+    const topLevel = chapters.filter((c) => !c.parentId).map((c) => c.name);
+    expect(topLevel).toEqual(["Polévky", "Dezerty"]);
   });
 });
 

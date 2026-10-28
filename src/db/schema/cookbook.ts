@@ -176,6 +176,9 @@ export const categories = pgTable(
     name: text("name").notNull(),
     parentId: uuid("parent_id"),
     sortOrder: integer("sort_order").notNull().default(0),
+    // Hidden chapters drop off the cookbook's front page, nothing else:
+    // their recipes stay searchable and filterable (zadání §5.1).
+    isHidden: boolean("is_hidden").notNull().default(false),
     searchNormalized: text("search_normalized").generatedAlwaysAs(
       (): ReturnType<typeof sql> =>
         sql`immutable_unaccent(lower(name))`,

@@ -1,90 +1,15 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { EmptyState } from "@/components/empty-state";
 import { OfflineNotice } from "@/components/offline-notice";
-import {
-  EMPTY_FILTERS,
-  FilterPanel,
-  type RecipeFilters,
-} from "@/components/recipes/filter-panel";
-import { RecipeCard } from "@/components/recipes/recipe-card";
+import { ChapterEditor } from "@/components/recipes/chapter-editor";
+import { ChapterTile } from "@/components/recipes/chapter-tile";
+import { RecipeBrowser } from "@/components/recipes/recipe-browser";
 import { apiFetch } from "@/lib/api/client";
-import { readRecipeListFromMirror } from "@/lib/offline/reads";
-import type { RecipeListResponse } from "@/lib/recipes/types";
-
-/**
- * Selection bar for the printable cookbook (§9.1). The PDF is streamed as an
- * attachment, so it is downloaded via a blob rather than a plain link.
- */
-function PdfBar({
-  items,
-  selected,
-  onToggleAll,
-  onDone,
-}: {
-  items: { id: string }[];
-  selected: Set<string>;
-  onToggleAll: () => void;
-  onDone: () => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function download() {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/pdf/cookbook", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipeIds: [...selected] }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error?.message ?? "PDF se nepodařilo vytvořit.");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `kucharka-${new Date().toISOString().slice(0, 10)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      onDone();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-card bg-surface-warm p-3">
-      <span className="text-sm">
-        Vyber recepty do tisknutelné kuchařky (bez nutričních hodnot).
-      </span>
-      <button
-        type="button"
-        onClick={onToggleAll}
-        className="rounded-lg border border-border px-3 py-2 text-sm min-h-11"
-      >
-        {selected.size === items.length ? "Zrušit výběr" : "Vybrat vše"}
-      </button>
-      <button
-        type="button"
-        onClick={download}
-        disabled={selected.size === 0 || busy}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50 min-h-11"
-      >
-        {busy ? "Připravuji…" : `Stáhnout PDF (${selected.size})`}
-      </button>
-      {error && <span className="text-sm text-destructive">{error}</span>}
-    </div>
-  );
-}
+import { readCookbookOverviewFromMirror } from "@/lib/offline/reads";
+import type { CookbookOverview } from "@/lib/recipes/types";
 
 function useDebounced<T>(value: T, ms: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -95,78 +20,55 @@ function useDebounced<T>(value: T, ms: number): T {
   return debounced;
 }
 
+/**
+ * The cookbook opens on its chapters, not on a wall of recipes (§5.1): you
+ * pick where to look first, the way you would with a printed book.
+ *
+ * Typing in the search box skips the chapters — you cannot search inside a
+ * chapter you have not found yet.
+ */
 export default function CookbookPage() {
   const [q, setQ] = useState("");
-  const [filters, setFilters] = useState<RecipeFilters>(EMPTY_FILTERS);
-  const [pdfMode, setPdfMode] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editing, setEditing] = useState(false);
   const query = useDebounced(q, 300);
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery({
-      queryKey: ["recipes", query, filters],
-      // Cooking happens in a kitchen, sometimes without signal: fall back to
-      // the mirror (docs/SYNC.md §6, priority 1).
-      queryFn: async ({ pageParam }) => {
-        const params = new URLSearchParams();
-        if (query) params.set("q", query);
-        if (filters.categoryId) params.set("categoryId", filters.categoryId);
-        for (const tagId of filters.tagIds) params.append("tagId", tagId);
-        if (filters.difficulty) params.set("difficulty", filters.difficulty);
-        if (filters.maxTotalTime)
-          params.set("maxTotalTime", String(filters.maxTotalTime));
-        if (filters.includeFoodCategoryId)
-          params.set("includeFoodCategoryId", filters.includeFoodCategoryId);
-        if (filters.excludeFoodCategoryId)
-          params.set("excludeFoodCategoryId", filters.excludeFoodCategoryId);
-        if (pageParam) params.set("cursor", pageParam);
-        try {
-          return await apiFetch<RecipeListResponse>(`/api/recipes?${params}`);
-        } catch (err) {
-          // Paging offline would mean re-filtering the whole mirror per page;
-          // the mirror answer is complete, so there is no second page.
-          if (pageParam) throw err;
-          const mirrored = await readRecipeListFromMirror({
-            q: query,
-            difficulty: filters.difficulty,
-            maxTotalTime: filters.maxTotalTime,
-          }).catch(() => null);
-          if (!mirrored) throw err;
-          return { ...mirrored, offline: true } as RecipeListResponse & {
-            offline: true;
-          };
-        }
-      },
-      initialPageParam: "",
-      getNextPageParam: (last) => last.nextCursor ?? undefined,
-    });
+  const { data, isLoading } = useQuery({
+    queryKey: ["cookbook-overview"],
+    queryFn: async () => {
+      try {
+        return await apiFetch<CookbookOverview>("/api/categories/overview");
+      } catch (err) {
+        const mirrored = await readCookbookOverviewFromMirror().catch(
+          () => null,
+        );
+        if (mirrored) return { ...mirrored, offline: true } as CookbookOverview;
+        throw err;
+      }
+    },
+  });
 
-  const items = data?.pages.flatMap((p) => p.items) ?? [];
-  const offline = data?.pages.some(
-    (page) => (page as { offline?: boolean }).offline,
-  );
-  // Everything below needs link tables that are not mirrored (D-025).
-  const droppedFilters =
-    offline &&
-    Boolean(
-      filters.categoryId ||
-      filters.tagIds.length ||
-      filters.includeFoodCategoryId ||
-      filters.excludeFoodCategoryId,
-    );
+  const offline = (data as { offline?: boolean } | undefined)?.offline === true;
+  const chapters = data?.chapters ?? [];
+  const topLevel = chapters.filter((c) => !c.parentId);
+  const visible = topLevel.filter((c) => !c.isHidden);
+  const hiddenCount = topLevel.length - visible.length;
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-semibold">Kuchařka</h1>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setPdfMode((v) => !v)}
-            className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
-          >
-            {pdfMode ? "Zrušit výběr" : "🖨 PDF"}
-          </button>
+          {!offline && (
+            <button
+              type="button"
+              onClick={() => setEditing((v) => !v)}
+              className={`inline-flex items-center rounded-lg border px-4 py-2 text-sm font-medium min-h-11 ${
+                editing ? "border-primary text-primary" : "border-border"
+              }`}
+            >
+              {editing ? "Hotovo" : "⚙︎ Kapitoly"}
+            </button>
+          )}
           <Link
             href="/kucharka/import"
             className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
@@ -186,94 +88,68 @@ export default function CookbookPage() {
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Hledat recept… (bez diakritiky, toleruje překlepy)"
+        placeholder="Hledat recept v celé kuchařce… (bez diakritiky, toleruje překlepy)"
         className="mb-3 w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-base outline-none focus:ring-2 focus:ring-ring"
       />
 
-      <FilterPanel filters={filters} onChange={setFilters} />
-
-      {offline && (
-        <OfflineNotice>
-          Hledá se jen podle názvu a ingrediencí, bez tolerance překlepů.
-          {droppedFilters &&
-            " Filtry kategorií, štítků a skupin potravin teď nejdou použít."}
-        </OfflineNotice>
-      )}
-
-      {pdfMode && (
-        <PdfBar
-          items={items}
-          selected={selected}
-          onToggleAll={() =>
-            setSelected(
-              selected.size === items.length
-                ? new Set()
-                : new Set(items.map((i) => i.id)),
-            )
-          }
-          onDone={() => {
-            setPdfMode(false);
-            setSelected(new Set());
-          }}
-        />
-      )}
-
-      {isLoading ? (
-        <p className="py-16 text-center text-muted-foreground">Načítám…</p>
-      ) : items.length === 0 ? (
-        query ? (
-          <EmptyState
-            icon="🔍"
-            title="Nic nenalezeno"
-            description={`Pro „${query}“ nemáme žádný recept.`}
-          />
-        ) : (
-          <EmptyState
-            icon="🥘"
-            title="Zatím žádné recepty"
-            description="Začni tlačítkem „Přidat recept“ vpravo nahoře."
-          />
-        )
+      {query ? (
+        <RecipeBrowser q={query} />
+      ) : editing ? (
+        <ChapterEditor chapters={chapters} onClose={() => setEditing(false)} />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map((r) =>
-              pdfMode ? (
-                <label
-                  key={r.id}
-                  className="relative block cursor-pointer rounded-card ring-primary has-[:checked]:ring-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.has(r.id)}
-                    onChange={(e) => {
-                      const next = new Set(selected);
-                      if (e.target.checked) next.add(r.id);
-                      else next.delete(r.id);
-                      setSelected(next);
-                    }}
-                    className="absolute left-3 top-3 z-10 h-6 w-6 accent-primary"
-                  />
-                  {/* Selection mode: the card must not navigate away. */}
-                  <div className="pointer-events-none">
-                    <RecipeCard recipe={r} />
-                  </div>
-                </label>
-              ) : (
-                <RecipeCard key={r.id} recipe={r} />
-              ),
-            )}
-          </div>
-          {hasNextPage && (
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="rounded-lg border border-border px-6 py-2.5 font-medium hover:bg-surface-warm min-h-11"
-              >
-                {isFetchingNextPage ? "Načítám…" : "Načíst další"}
-              </button>
+          {offline && (
+            <OfflineNotice>
+              Kapitoly i počty jsou z poslední stažené kopie.
+            </OfflineNotice>
+          )}
+
+          {isLoading ? (
+            <p className="py-16 text-center text-muted-foreground">Načítám…</p>
+          ) : (
+            // Two per row even on a phone: a table of contents you scroll
+            // through forever is no table of contents.
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+              <ChapterTile
+                href="/kucharka/kategorie/vse"
+                name="Všechny recepty"
+                count={data?.totalRecipes ?? 0}
+                icon="📚"
+              />
+              {visible.map((chapter) => (
+                <ChapterTile
+                  key={chapter.id}
+                  href={`/kucharka/kategorie/${chapter.id}`}
+                  name={chapter.name}
+                  count={chapter.recipeCount}
+                  coverPhotoKey={chapter.coverPhotoKey}
+                />
+              ))}
+              {(data?.uncategorisedRecipes ?? 0) > 0 && (
+                <ChapterTile
+                  href="/kucharka/kategorie/nezarazene"
+                  name="Bez kategorie"
+                  count={data!.uncategorisedRecipes}
+                  icon="🗂"
+                />
+              )}
             </div>
+          )}
+
+          {hiddenCount > 0 && !offline && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              {hiddenCount === 1
+                ? "Jedna kapitola je skrytá"
+                : `Skrytých kapitol: ${hiddenCount}`}{" "}
+              — recepty v nich zůstávají dohledatelné.{" "}
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="text-primary hover:underline"
+              >
+                Zobrazit nastavení kapitol
+              </button>
+            </p>
           )}
         </>
       )}

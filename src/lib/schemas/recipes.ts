@@ -76,6 +76,8 @@ export type RecipeUpsert = z.infer<typeof recipeUpsertSchema>;
 export const recipeListQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
   categoryId: uuid.optional(),
+  /** Only recipes filed in no chapter at all (§5.1). */
+  uncategorised: z.coerce.boolean().optional(),
   tagIds: z.array(uuid).optional(),
   difficulty: z.enum(DIFFICULTIES).optional(),
   maxTotalTime: z.coerce.number().int().positive().optional(),

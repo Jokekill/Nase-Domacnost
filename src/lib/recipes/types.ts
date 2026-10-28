@@ -44,3 +44,22 @@ export function formatTime(totalMin: number | null): string | null {
   if (h === 0) return `${m} min`;
   return `${h}:${String(m).padStart(2, "0")} h`;
 }
+
+export type CookbookChapter = {
+  id: string;
+  name: string;
+  parentId: string | null;
+  sortOrder: number;
+  isHidden: boolean;
+  /** Including everything in the chapter's subcategories. */
+  recipeCount: number;
+  coverPhotoKey: string | null;
+};
+
+export type CookbookOverview = {
+  chapters: CookbookChapter[];
+  totalRecipes: number;
+  uncategorisedRecipes: number;
+  /** Set when the answer came from the local mirror instead of the server. */
+  offline?: boolean;
+};

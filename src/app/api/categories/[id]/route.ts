@@ -10,6 +10,8 @@ const patchSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   parentId: z.string().uuid().nullish(),
   sortOrder: z.number().int().optional(),
+  // Hidden = off the cookbook's front page only; the recipes stay findable.
+  isHidden: z.boolean().optional(),
 });
 
 export const PATCH = apiHandler(async (req: NextRequest, { params }: Params) => {

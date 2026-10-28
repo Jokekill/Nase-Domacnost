@@ -161,14 +161,21 @@ export async function readRecipeListFromMirror(query: {
   q?: string;
   difficulty?: string | null;
   maxTotalTime?: number | null;
+  /** Chapter, including everything under it — like the closure table does. */
+  categoryId?: string | null;
+  uncategorised?: boolean;
 }): Promise<{ items: OfflineRecipeListItem[]; nextCursor: null }> {
   const db = offlineDb();
-  const [recipes, photos, ingredients, foods] = await Promise.all([
+  const [recipes, photos, ingredients, foods, categories] = await Promise.all([
     db.mirror("recipes").toArray(),
     db.mirror("recipe_photos").toArray(),
     db.mirror("recipe_ingredients").toArray(),
     db.mirror("foods").toArray(),
+    db.mirror("categories").toArray(),
   ]);
+  const wantedCategories = query.categoryId
+    ? subtreeOf(categories.filter(alive), query.categoryId)
+    : null;
 
   const needle = query.q ? normalize(query.q.trim()) : "";
   const foodName = new Map(
@@ -191,6 +198,14 @@ export async function readRecipeListFromMirror(query: {
   const items = recipes
     .filter(alive)
     .filter((recipe) => {
+      const categoryIds = (recipe.categoryIds as string[]) ?? [];
+      if (query.uncategorised && categoryIds.length > 0) return false;
+      if (
+        wantedCategories &&
+        !categoryIds.some((id) => wantedCategories.has(id))
+      ) {
+        return false;
+      }
       if (query.difficulty && recipe.difficulty !== query.difficulty)
         return false;
       if (
@@ -229,6 +244,88 @@ export type OfflineRecipeListItem = {
   difficulty: string | null;
   mainPhotoKey: string | null;
 };
+
+/** A category and everything below it — the client-side closure table. */
+function subtreeOf(categories: MirrorRow[], rootId: string): Set<string> {
+  const childrenOf = new Map<string, string[]>();
+  for (const category of categories) {
+    const parent = (category.parentId as string | null) ?? "";
+    childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), category.id]);
+  }
+  const subtree = new Set<string>();
+  const queue = [rootId];
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (subtree.has(id)) continue;
+    subtree.add(id);
+    queue.push(...(childrenOf.get(id) ?? []));
+  }
+  return subtree;
+}
+
+/**
+ * The cookbook's chapters from the mirror (§5.1). Counts are computed the same
+ * way the server does — over the subtree — now that a recipe carries its
+ * `categoryIds` (docs/SYNC.md §2).
+ */
+export async function readCookbookOverviewFromMirror(): Promise<{
+  chapters: {
+    id: string;
+    name: string;
+    parentId: string | null;
+    sortOrder: number;
+    isHidden: boolean;
+    recipeCount: number;
+    coverPhotoKey: string | null;
+  }[];
+  totalRecipes: number;
+  uncategorisedRecipes: number;
+}> {
+  const db = offlineDb();
+  const [categories, recipes, photos] = await Promise.all([
+    db.mirror("categories").toArray(),
+    db.mirror("recipes").toArray(),
+    db.mirror("recipe_photos").toArray(),
+  ]);
+  const live = categories.filter(alive);
+  const liveRecipes = recipes.filter(alive);
+  const newestFirst = [...liveRecipes].sort((a, b) =>
+    String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")),
+  );
+
+  return {
+    chapters: live
+      .sort(
+        (a, b) =>
+          ((a.sortOrder as number) ?? 0) - ((b.sortOrder as number) ?? 0) ||
+          String(a.name).localeCompare(String(b.name), "cs"),
+      )
+      .map((category) => {
+        const subtree = subtreeOf(live, category.id);
+        const inChapter = newestFirst.filter((recipe) =>
+          ((recipe.categoryIds as string[]) ?? []).some((id) =>
+            subtree.has(id),
+          ),
+        );
+        const withPhoto = inChapter
+          .map((recipe) => mainPhotoOf(photos, recipe.id))
+          .find((key) => key != null);
+        return {
+          id: category.id,
+          name: category.name as string,
+          parentId: (category.parentId as string | null) ?? null,
+          sortOrder: (category.sortOrder as number) ?? 0,
+          isHidden: Boolean(category.isHidden),
+          recipeCount: inChapter.length,
+          coverPhotoKey: withPhoto ?? null,
+        };
+      }),
+    totalRecipes: liveRecipes.length,
+    uncategorisedRecipes: liveRecipes.filter(
+      (recipe) => ((recipe.categoryIds as string[]) ?? []).length === 0,
+    ).length,
+  };
+}
 
 function mainPhotoOf(photos: MirrorRow[], recipeId: string): string | null {
   const mine = photos

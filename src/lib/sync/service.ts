@@ -1,6 +1,12 @@
 import { and, asc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { changeLog, syncAppliedOps, taskAssignees } from "@/db/schema";
+import {
+  changeLog,
+  recipeCategories,
+  recipeTags,
+  syncAppliedOps,
+  taskAssignees,
+} from "@/db/schema";
 import { ApiError } from "@/lib/api/errors";
 import type { HouseholdContext } from "@/lib/auth/guards";
 import { recordCompletionHistory } from "@/lib/tasks/service";
@@ -163,28 +169,48 @@ async function loadRows(
 }
 
 /**
- * M:N links travel inside the parent row (docs/SYNC.md §2) — the assignment
- * endpoints already touch the parent, so a changed link reaches change_log.
- * Without this the offline task list cannot tell "moje" from "ostatní".
+ * M:N links travel inside the parent row (docs/SYNC.md §2) — the endpoints that
+ * change them already touch the parent, so the change reaches change_log.
+ * Without this the offline task list cannot tell "moje" from "ostatní", and the
+ * offline cookbook cannot put a recipe in a chapter.
  */
 async function withLinks(rows: Row[], name: string): Promise<Row[]> {
-  if (name !== "tasks" || rows.length === 0) return rows;
+  if (rows.length === 0) return rows;
+  const ids = rows.map((row) => row.id as string);
 
-  const links = await db
-    .select()
-    .from(taskAssignees)
-    .where(
-      inArray(
-        taskAssignees.taskId,
-        rows.map((row) => row.id as string),
-      ),
-    );
-  return rows.map((row) => ({
-    ...row,
-    assigneeIds: links
-      .filter((link) => link.taskId === row.id)
-      .map((link) => link.userId),
-  }));
+  if (name === "tasks") {
+    const links = await db
+      .select()
+      .from(taskAssignees)
+      .where(inArray(taskAssignees.taskId, ids));
+    return rows.map((row) => ({
+      ...row,
+      assigneeIds: links
+        .filter((link) => link.taskId === row.id)
+        .map((link) => link.userId),
+    }));
+  }
+
+  if (name === "recipes") {
+    const [categoryLinks, tagLinks] = await Promise.all([
+      db
+        .select()
+        .from(recipeCategories)
+        .where(inArray(recipeCategories.recipeId, ids)),
+      db.select().from(recipeTags).where(inArray(recipeTags.recipeId, ids)),
+    ]);
+    return rows.map((row) => ({
+      ...row,
+      categoryIds: categoryLinks
+        .filter((link) => link.recipeId === row.id)
+        .map((link) => link.categoryId),
+      tagIds: tagLinks
+        .filter((link) => link.recipeId === row.id)
+        .map((link) => link.tagId),
+    }));
+  }
+
+  return rows;
 }
 
 /** Dates → ISO strings; everything else passes through as-is. */

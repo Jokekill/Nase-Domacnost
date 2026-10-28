@@ -20,9 +20,10 @@ Odchylky od původního návrhu, na které se přišlo při implementaci:
   nastavení TanStack Query při `navigator.onLine === false` pozastaví dotazy
   i mutace, takže by se záložní čtení ze zrcadla ani zápis do outboxu nikdy
   nespustily (D-026).
-- **M:N vazby zatím nese jen `tasks`** (`assigneeIds`); u receptů se
-  `categoryIds`/`tagIds` do zrcadla neposílají, proto se offline neaplikují
-  filtry podle kategorií, štítků a skupin potravin.
+- **M:N vazby v rodičovském řádku nesou `tasks`** (`assigneeIds`) a **`recipes`**
+  (`categoryIds`, `tagIds`) — díky tomu funguje offline i kuchařka po
+  kapitolách (D-028). Filtry podle štítků a skupin potravin offline pořád
+  nejdou: potřebují vazební tabulky, které v zrcadle nejsou.
 
 ---
 

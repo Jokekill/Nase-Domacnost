@@ -8,11 +8,12 @@ Není to produkt pro veřejnost — je to domácí server pro jednu rodinu (D-00
 
 ## Co to umí
 
-- **Kuchařka** — recepty s fotkami, skupinami ingrediencí, kroky a přípravou
-  předem; hledání bez diakritiky, které toleruje překlepy i skloňování
-  („cocka" najde „čočky"), filtry podle kategorií, štítků, času, obtížnosti
-  a skupin potravin; přepočet porcí s lidským zaokrouhlením; režim vaření
-  (krok na obrazovku, obrazovka nezhasne).
+- **Kuchařka** — otevírá se na kapitolách jako tištěná kniha (pořadí si určíš,
+  nepotřebné kapitoly schováš); recepty s fotkami, skupinami ingrediencí, kroky
+  a přípravou předem; hledání bez diakritiky, které toleruje překlepy
+  i skloňování („cocka" najde „čočky"), filtry podle kategorií, štítků, času,
+  obtížnosti a skupin potravin; přepočet porcí s lidským zaokrouhlením; režim
+  vaření (krok na obrazovku, obrazovka nezhasne).
 - **Nutriční hodnoty** — katalog 228 potravin, převody jednotek, které nikdy
   nehádají, přepis hodnot v rámci receptu, dopočet na cílovou hodnotu,
   čárové kódy a Open Food Facts.
@@ -50,7 +51,7 @@ Produkční build nikdy nespouštěj proti běžícímu dev serveru bez
 ## Kontroly
 
 ```bash
-pnpm lint && pnpm typecheck && pnpm test    # 151 jednotkových testů
+pnpm lint && pnpm typecheck && pnpm test    # 158 jednotkových testů
 pnpm test:e2e                                # Playwright smoke (potřebuje běžící app)
 ```
 

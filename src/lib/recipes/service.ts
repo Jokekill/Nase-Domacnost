@@ -79,6 +79,11 @@ export async function listRecipes(actor: Actor, query: RecipeListQuery) {
       WHERE rc.recipe_id = ${recipes.id} AND cc.ancestor_id = ${query.categoryId}
     )`);
   }
+  if (query.uncategorised) {
+    conditions.push(sql`NOT EXISTS (
+      SELECT 1 FROM recipe_categories rc WHERE rc.recipe_id = ${recipes.id}
+    )`);
+  }
   for (const tagId of query.tagIds ?? []) {
     conditions.push(sql`EXISTS (
       SELECT 1 FROM recipe_tags rt

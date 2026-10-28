@@ -17,6 +17,7 @@ export const GET = apiHandler(async (req: NextRequest) => {
   const query = recipeListQuerySchema.parse({
     q: sp.get("q") ?? undefined,
     categoryId: sp.get("categoryId") ?? undefined,
+    uncategorised: sp.get("uncategorised") ?? undefined,
     tagIds: sp.getAll("tagId").length ? sp.getAll("tagId") : undefined,
     difficulty: sp.get("difficulty") ?? undefined,
     maxTotalTime: sp.get("maxTotalTime") ?? undefined,
