@@ -3,6 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { CleanupWizard } from "@/components/tasks/cleanup-wizard";
+import {
+  TaskEditDialog,
+  type TaskPatch,
+} from "@/components/tasks/task-edit-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { OfflineNotice } from "@/components/offline-notice";
 import { apiFetch } from "@/lib/api/client";
@@ -30,6 +34,7 @@ type Task = {
 };
 type Me = { id: string; displayName: string };
 type Member = { userId: string; displayName: string };
+type TaskList = { id: string; name: string };
 type RawSuggestion = Omit<TaskSuggestion, "lastCompletedAt"> & {
   lastCompletedAt: string | null;
 };
@@ -41,6 +46,8 @@ export default function TasksPage() {
   const [assignUser, setAssignUser] = useState<string>("");
   const [picked, setPicked] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const { data: me } = useQuery({
     queryKey: ["me"],
@@ -52,6 +59,10 @@ export default function TasksPage() {
       cached("members", () =>
         apiFetch<{ items: Member[] }>("/api/household/members"),
       ),
+  });
+  const { data: taskLists } = useQuery({
+    queryKey: ["task-lists"],
+    queryFn: () => apiFetch<{ items: TaskList[] }>("/api/task-lists"),
   });
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["tasks"],
@@ -133,7 +144,31 @@ export default function TasksPage() {
     onSuccess: invalidate,
   });
 
+  const editTask = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: TaskPatch }) =>
+      apiFetch(`/api/tasks/${id}`, { method: "PATCH", json: patch }),
+    onSuccess: async () => {
+      setEditingId(null);
+      setEditError(null);
+      await invalidate();
+    },
+    onError: (err: Error) => setEditError(err.message),
+  });
+
+  const deleteTask = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/api/tasks/${id}`, { method: "DELETE" }),
+    onSuccess: async () => {
+      setEditingId(null);
+      setEditError(null);
+      setMessage("Úkol smazán.");
+      await invalidate();
+    },
+    onError: (err: Error) => setEditError(err.message),
+  });
+
   const items = tasks?.items ?? [];
+  const editing = items.find((t) => t.id === editingId) ?? null;
   const offline =
     (tasks as { offline?: boolean } | undefined)?.offline === true;
   const open = items.filter((t) => t.status === "open");
@@ -286,6 +321,7 @@ export default function TasksPage() {
             picked={picked}
             onPick={setPicked}
             onToggle={(id, done) => complete.mutate({ id, done })}
+            onEdit={offline ? undefined : setEditingId}
           />
           <TaskGroup
             title="Ostatní úkoly"
@@ -296,6 +332,7 @@ export default function TasksPage() {
             picked={picked}
             onPick={setPicked}
             onToggle={(id, done) => complete.mutate({ id, done })}
+            onEdit={offline ? undefined : setEditingId}
           />
           {done.length > 0 && (
             <TaskGroup
@@ -306,9 +343,26 @@ export default function TasksPage() {
               picked={picked}
               onPick={setPicked}
               onToggle={(id, isDone) => complete.mutate({ id, done: isDone })}
+              onEdit={offline ? undefined : setEditingId}
             />
           )}
         </>
+      )}
+
+      {editing && (
+        <TaskEditDialog
+          task={editing}
+          members={members?.items ?? []}
+          taskLists={taskLists?.items ?? []}
+          saving={editTask.isPending || deleteTask.isPending}
+          error={editError}
+          onClose={() => {
+            setEditingId(null);
+            setEditError(null);
+          }}
+          onSave={(patch) => editTask.mutate({ id: editing.id, patch })}
+          onDelete={() => deleteTask.mutate(editing.id)}
+        />
       )}
 
       {showWizard && (
@@ -336,6 +390,7 @@ function TaskGroup({
   picked,
   onPick,
   onToggle,
+  onEdit,
 }: {
   title: string;
   tasks: Task[];
@@ -345,6 +400,8 @@ function TaskGroup({
   picked: string[];
   onPick: (next: string[]) => void;
   onToggle: (id: string, done: boolean) => void;
+  /** Omitted offline — editing is not in the push whitelist (D-025). */
+  onEdit?: (id: string) => void;
 }) {
   if (tasks.length === 0 && !emptyText) return null;
 
@@ -405,37 +462,73 @@ function TaskGroup({
                     {isDone ? "✓" : <span className="h-5 w-5 rounded" />}
                   </button>
                 )}
-                <span className="grow">
-                  <span
-                    className={
-                      isDone ? "text-muted-foreground line-through" : ""
-                    }
-                  >
-                    {task.name}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {task.assignees.length > 0
-                      ? task.assignees.map((a) => a.displayName).join(", ")
-                      : "nepřiřazeno"}
-                    {task.periodStart && task.periodEnd && (
-                      <>
-                        {" · "}
-                        {formatRange(
-                          new Date(`${task.periodStart}T00:00:00`),
-                          new Date(`${task.periodEnd}T00:00:00`),
-                        )}
-                      </>
-                    )}
-                    {isDone && task.completedByName && (
-                      <> · splněno: {task.completedByName}</>
-                    )}
-                  </span>
-                </span>
+                <TaskLabel
+                  task={task}
+                  isDone={isDone}
+                  onEdit={assignMode ? undefined : onEdit}
+                />
               </li>
             );
           })}
         </ul>
       )}
     </section>
+  );
+}
+
+/**
+ * The text half of a task row. Tapping it opens the edit form — so the whole
+ * label is the target, not a tiny pencil next to it (44 px rule, §11.2).
+ */
+function TaskLabel({
+  task,
+  isDone,
+  onEdit,
+}: {
+  task: Task;
+  isDone: boolean;
+  onEdit?: (id: string) => void;
+}) {
+  const body = (
+    <>
+      <span className={isDone ? "text-muted-foreground line-through" : ""}>
+        {task.name}
+      </span>
+      <span className="block text-xs text-muted-foreground">
+        {task.assignees.length > 0
+          ? task.assignees.map((a) => a.displayName).join(", ")
+          : "nepřiřazeno"}
+        {task.periodStart && task.periodEnd && (
+          <>
+            {" · "}
+            {formatRange(
+              new Date(`${task.periodStart}T00:00:00`),
+              new Date(`${task.periodEnd}T00:00:00`),
+            )}
+          </>
+        )}
+        {isDone && task.completedByName && (
+          <> · splněno: {task.completedByName}</>
+        )}
+      </span>
+      {task.description && (
+        <span className="mt-0.5 block text-xs text-muted-foreground">
+          📝 {task.description}
+        </span>
+      )}
+    </>
+  );
+
+  if (!onEdit) return <span className="grow">{body}</span>;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onEdit(task.id)}
+      className="grow rounded-lg px-1 py-1.5 text-left hover:bg-surface-warm min-h-11"
+      aria-label={`Upravit ${task.name}`}
+    >
+      {body}
+    </button>
   );
 }

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -107,6 +108,11 @@ export const foods = pgTable(
       .notNull()
       .default("manual"),
     offBarcode: text("off_barcode"),
+    // Remembered rohlik.cz product, so the household picks "which flour" once
+    // and every later basket uses the same one (D-029).
+    rohlikProductId: bigint("rohlik_product_id", { mode: "number" }),
+    /** Snapshot of the product name at the time of pairing, for the UI. */
+    rohlikProductName: text("rohlik_product_name"),
     searchNormalized: text("search_normalized").generatedAlwaysAs(
       (): ReturnType<typeof sql> =>
         sql`immutable_unaccent(lower(name))`,

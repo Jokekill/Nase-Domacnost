@@ -6,6 +6,7 @@ import { ApiError, apiHandler } from "@/lib/api/errors";
 import { requireHousehold, requireUser } from "@/lib/auth/guards";
 import { hashPassword, verifyPassword } from "@/lib/auth/passwords";
 import { publicSharingEnabled } from "@/lib/recipes/access";
+import { rohlikConfigured } from "@/lib/rohlik/client";
 import { updateMeSchema } from "@/lib/schemas/auth";
 
 export const GET = apiHandler(async () => {
@@ -23,7 +24,10 @@ export const GET = apiHandler(async () => {
     role: ctx.role,
     household,
     // Server-side flags the UI needs to know about (§8.5).
-    features: { publicSharing: publicSharingEnabled() },
+    features: {
+      publicSharing: publicSharingEnabled(),
+      rohlik: rohlikConfigured(),
+    },
   });
 });
 

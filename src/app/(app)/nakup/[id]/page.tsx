@@ -6,13 +6,15 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { uuidv7 } from "uuidv7";
 import { OfflineNotice } from "@/components/offline-notice";
+import { RohlikPanel } from "@/components/shopping/rohlik-panel";
 import { apiFetch } from "@/lib/api/client";
+import { cached } from "@/lib/offline/reads";
 import { formatRange } from "@/lib/dates";
 import { formatScaled } from "@/lib/domain/servings";
 import { checkShoppingItem } from "@/lib/offline/mutations";
 import { readShoppingListFromMirror } from "@/lib/offline/reads";
 import { UNIT_LABELS, type Unit } from "@/lib/recipes/types";
-import type { RecipeListResponse } from "@/lib/recipes/types";
+import type { RecipeListItem, RecipeListResponse } from "@/lib/recipes/types";
 
 type Source = {
   label: string;
@@ -49,6 +51,7 @@ export default function ShoppingListPage() {
   const queryClient = useQueryClient();
   const [openSources, setOpenSources] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [showRohlik, setShowRohlik] = useState(false);
   const [newItem, setNewItem] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -65,6 +68,14 @@ export default function ShoppingListPage() {
         throw err;
       }
     },
+  });
+
+  const { data: me } = useQuery({
+    queryKey: ["me"],
+    queryFn: () =>
+      cached("me", () =>
+        apiFetch<{ features?: { rohlik?: boolean } }>("/api/auth/me"),
+      ),
   });
 
   const invalidate = () =>
@@ -173,6 +184,17 @@ export default function ShoppingListPage() {
               ⬇︎ Naplnit
             </button>
           )}
+          {/* Rohlík is somebody else's server — strictly online, and only
+              once there is something to put in the basket. */}
+          {!offline && open.length > 0 && (
+            <button
+              onClick={() => setShowRohlik(true)}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
+              title="Spáruje položky s produkty na Rohlíku a přidá je do košíku"
+            >
+              🥕 Do Rohlíku
+            </button>
+          )}
           <Link
             href="/nakup"
             className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm min-h-11"
@@ -181,6 +203,14 @@ export default function ShoppingListPage() {
           </Link>
         </div>
       </div>
+
+      {showRohlik && (
+        <RohlikPanel
+          listId={id}
+          cartEnabled={me?.features?.rohlik ?? false}
+          onClose={() => setShowRohlik(false)}
+        />
+      )}
 
       {showImport && (
         <ImportPanel
@@ -380,6 +410,10 @@ function ImportPanel({
 }) {
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Picking a recipe does not import it yet: first we ask for the servings,
+  // because that is what the quantities get scaled by.
+  const [chosen, setChosen] = useState<RecipeListItem | null>(null);
+  const [servings, setServings] = useState(0);
 
   const { data: recipes } = useQuery({
     queryKey: ["recipes", search],
@@ -415,31 +449,87 @@ function ImportPanel({
       >
         📅 Z jídelníčku za toto období
       </button>
-      <p className="mb-2 text-xs text-muted-foreground">
-        …nebo přidej ingredience jednoho receptu:
-      </p>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Hledat recept…"
-        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-      />
-      {search.trim() && (
-        <ul className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-border">
-          {(recipes?.items ?? []).map((recipe) => (
-            <li key={recipe.id}>
-              <button
-                onClick={() => runImport.mutate({ recipeId: recipe.id })}
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-surface-warm"
-              >
-                {recipe.title}{" "}
-                <span className="text-muted-foreground">
-                  ({recipe.baseServings} porcí)
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+
+      {chosen ? (
+        <div className="rounded-lg border border-primary bg-surface-warm p-3">
+          <p className="mb-2 text-sm">
+            <strong>{chosen.title}</strong> — recept je na{" "}
+            {chosen.baseServings} porcí.
+          </p>
+          <span className="mb-1 block text-xs font-medium">
+            Kolik porcí vaříš?
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setServings((n) => Math.max(1, n - 1))}
+              className="h-11 w-11 select-none rounded-lg border border-border text-xl hover:bg-surface"
+              aria-label="Méně porcí"
+            >
+              −
+            </button>
+            <span className="min-w-20 select-none text-center text-sm font-medium">
+              {servings} porcí
+            </span>
+            <button
+              type="button"
+              onClick={() => setServings((n) => Math.min(200, n + 1))}
+              className="h-11 w-11 select-none rounded-lg border border-border text-xl hover:bg-surface"
+              aria-label="Více porcí"
+            >
+              +
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() =>
+                runImport.mutate({ recipeId: chosen.id, servings })
+              }
+              disabled={runImport.isPending}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50 min-h-11"
+            >
+              {runImport.isPending ? "Přidávám…" : "Přidat ingredience"}
+            </button>
+            <button
+              onClick={() => setChosen(null)}
+              className="rounded-lg border border-border px-4 py-2 text-sm min-h-11"
+            >
+              Jiný recept
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="mb-2 text-xs text-muted-foreground">
+            …nebo přidej ingredience jednoho receptu:
+          </p>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Hledat recept…"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          />
+          {search.trim() && (
+            <ul className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-border">
+              {(recipes?.items ?? []).map((recipe) => (
+                <li key={recipe.id}>
+                  <button
+                    onClick={() => {
+                      setChosen(recipe);
+                      setServings(recipe.baseServings);
+                    }}
+                    className="block w-full px-3 py-2 text-left text-sm hover:bg-surface-warm"
+                  >
+                    {recipe.title}{" "}
+                    <span className="text-muted-foreground">
+                      ({recipe.baseServings} porcí)
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
     </div>

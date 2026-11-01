@@ -16,6 +16,7 @@ import { formatScaled, scaleIngredient } from "@/lib/domain/servings";
 import { NutritionPanel } from "@/components/recipes/nutrition-panel";
 import { ReverseCalculator } from "@/components/recipes/reverse-calculator";
 import { SharePanel } from "@/components/recipes/share-panel";
+import { AddRecipeToListDialog } from "@/components/shopping/add-recipe-dialog";
 import {
   DIFFICULTY_LABELS,
   UNIT_LABELS,
@@ -61,6 +62,8 @@ export default function RecipeDetailPage() {
   const queryClient = useQueryClient();
   const [servings, setServings] = useState<number | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [shoppingOpen, setShoppingOpen] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const { data: recipe, isLoading } = useQuery({
     queryKey: ["recipe", id],
@@ -182,6 +185,17 @@ export default function RecipeDetailPage() {
               ✏️ Upravit
             </Link>
           )}
+          {/* Filling a list is server work (scaling + merging), so it waits
+              for the network like the other write actions (D-025). */}
+          {!offline && (
+            <button
+              onClick={() => setShoppingOpen(true)}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-warm min-h-11"
+              title="Přidá ingredience do nákupního seznamu, přepočítané na zadaný počet porcí"
+            >
+              🛒 Do nákupu
+            </button>
+          )}
           {!offline && (
             <button
               onClick={() => copy.mutate()}
@@ -223,9 +237,35 @@ export default function RecipeDetailPage() {
         />
       )}
 
+      {shoppingOpen && (
+        <AddRecipeToListDialog
+          recipeId={id}
+          recipeTitle={recipe.title}
+          baseServings={recipe.baseServings}
+          defaultServings={currentServings}
+          onClose={() => setShoppingOpen(false)}
+          onDone={(msg) => {
+            setShoppingOpen(false);
+            setMessage(msg);
+          }}
+        />
+      )}
+
+      {message && (
+        <p
+          role="status"
+          className="mb-3 rounded-lg bg-surface-warm p-2.5 text-sm"
+        >
+          {message}{" "}
+          <Link href="/nakup" className="text-primary hover:underline">
+            Otevřít nákup
+          </Link>
+        </p>
+      )}
+
       {offline && (
         <OfflineNotice>
-          Úpravy, kopírování a sdílení počkají na síť.
+          Úpravy, kopírování, sdílení a nákup počkají na síť.
         </OfflineNotice>
       )}
 

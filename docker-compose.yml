@@ -69,6 +69,10 @@ services:
       DATABASE_URL: postgres://domacnost:${POSTGRES_PASSWORD:-domacnost_dev}@db:5432/domacnost
       UPLOADS_DIR: /data/uploads
       PUBLIC_SHARING_ENABLED: ${PUBLIC_SHARING_ENABLED:-false}
+      # Rohlík account for filling the basket (D-029). Empty = the review
+      # screen still works, the basket button stays disabled.
+      ROHLIK_EMAIL: ${ROHLIK_EMAIL:-}
+      ROHLIK_PASSWORD: ${ROHLIK_PASSWORD:-}
       # HTTPS comes from `tailscale serve` in front of this (D-003), so the
       # __Host- cookie prefix stays on.
       DEV_INSECURE_COOKIES: ${DEV_INSECURE_COOKIES:-false}

@@ -130,7 +130,7 @@ Stejné rozhraní má `/api/food-categories` (Fáze 3).
 | GET/POST | `/api/task-templates`, DELETE `/api/task-templates/:id` | šablony (`intervalDays` = null pro jednorázové) |
 | GET  | `/api/tasks?from=&to=&listId=&status=` | úkoly včetně přiřazených osob |
 | POST | `/api/tasks` | vytvoření: `{templateIds[], customNames[], periodStart, periodEnd, taskListId}` |
-| PATCH/DELETE | `/api/tasks/:id` | úprava / soft delete |
+| PATCH/DELETE | `/api/tasks/:id` | úprava / soft delete; PATCH bere i `assigneeIds[]`, které **nahradí** celou sadu přiřazených (prázdné pole = nepřiřazeno) |
 | POST | `/api/tasks/assign` | hromadné přiřazení `{taskIds[], userId, mode: "add"\|"replace"}` |
 | POST | `/api/tasks/:id/complete` | `{done: bool}` — kdokoli, zaznamená kdo splnil |
 | GET  | `/api/tasks/suggestions?max=` | občasné úkoly „je čas znovu" (výchozí strop 3) |
@@ -179,6 +179,19 @@ a `copiedFrom`, aby UI nenabízelo, co API stejně odmítne.
 |---|---|---|
 | GET  | `/api/sync/pull?cursor=&limit=` | změny z change_log od kurzoru |
 | POST | `/api/sync/push` | dávka operací z outboxu (idempotentní dle opId) |
+
+## Rohlík.cz (D-029)
+
+| Metoda | Cesta | Popis |
+|---|---|---|
+| POST | `/api/rohlik/match` | `{listId}` → neodškrtnuté položky seznamu s nabídkou produktů a počtem balení; nic neukládá |
+| GET  | `/api/rohlik/search?q=` | ruční dohledání produktu (min. 2 znaky) |
+| POST | `/api/rohlik/cart` | `{lines: [{productId, quantity, foodId?, productName?}]}` → přidá do košíku a uloží párování |
+
+Košík se jen **plní**, nikdy nemaže a nikdy neobjednává. Bez `ROHLIK_EMAIL`
+a `ROHLIK_PASSWORD` vrací `/api/rohlik/cart` chybu 400 a UI tlačítko zakáže;
+`match` a `search` fungují i tak (Rohlík je nabízí anonymně).
+`GET /api/auth/me` proto vrací `features.rohlik`.
 
 ## Ostatní
 

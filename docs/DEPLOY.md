@@ -52,6 +52,7 @@ V `.env` nastav:
 | `POSTGRES_PASSWORD` | něco dlouhého a náhodného, **ne** výchozí |
 | `DEV_INSECURE_COOKIES` | `false` (HTTPS zajišťuje Tailscale) |
 | `PUBLIC_SHARING_ENABLED` | `false`, dokud veřejné odkazy nechceš |
+| `ROHLIK_EMAIL`, `ROHLIK_PASSWORD` | účet na rohlik.cz; bez nich jde seznam jen spárovat, košík se nenaplní (D-029) |
 | `UPLOADS_HOST_DIR` | `/srv/domacnost/uploads` |
 | `BACKUPS_HOST_DIR` | `/srv/domacnost/backups` |
 | `BACKUP_HOUR` | `03` |

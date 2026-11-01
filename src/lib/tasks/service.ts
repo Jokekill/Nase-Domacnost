@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-
 import { uuidv7 } from "uuidv7";
 import { db } from "@/db/client";
 import {
+  householdMembers,
   taskAssignees,
   taskCompletionHistory,
   taskLists,
@@ -205,6 +206,90 @@ export async function createTasks(
   await db.insert(tasks).values(values);
   created.push(...values.map((v) => v.id));
   return { created };
+}
+
+/* ------------------------------------------------------------------ */
+/* Editing one task                                                   */
+/* ------------------------------------------------------------------ */
+
+export type UpdateTaskInput = {
+  name?: string;
+  description?: string | null;
+  taskListId?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  dueAt?: string | null;
+  /** The whole assignee set; `[]` leaves the task unassigned. */
+  assigneeIds?: string[];
+};
+
+/**
+ * Edits a single task from the Úkoly screen: what it is called, who it is
+ * for, when it is due and the note that goes with it.
+ *
+ * Assignees are replaced as a set rather than added to, because this comes
+ * from a form where the ticked boxes ARE the answer — unlike the bulk
+ * assignment flow below, which appends (zadání §10.5). Both the row and its
+ * assignees move in one transaction so a half-saved edit cannot reach
+ * `change_log` and from there the other phones.
+ */
+export async function updateTask(
+  actor: Actor,
+  taskId: string,
+  input: UpdateTaskInput,
+): Promise<void> {
+  const { assigneeIds, dueAt, ...fields } = input;
+
+  if (assigneeIds?.length) {
+    // An id from the request never decides who may be assigned — only
+    // membership of the actor's own household does (ARCHITECTURE.md §2.1).
+    const members = await db
+      .select({ userId: householdMembers.userId })
+      .from(householdMembers)
+      .where(
+        and(
+          eq(householdMembers.householdId, actor.householdId),
+          inArray(householdMembers.userId, assigneeIds),
+        ),
+      );
+    if (members.length !== new Set(assigneeIds).size) {
+      throw new ApiError(
+        "validation_error",
+        "Úkol lze přiřadit jen členům domácnosti.",
+      );
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    const updated = await tx
+      .update(tasks)
+      .set({
+        ...fields,
+        ...(dueAt !== undefined
+          ? { dueAt: dueAt ? new Date(dueAt) : null }
+          : {}),
+        lastModifiedBy: actor.userId,
+      })
+      .where(
+        and(
+          eq(tasks.id, taskId),
+          eq(tasks.householdId, actor.householdId),
+          isNull(tasks.deletedAt),
+        ),
+      )
+      .returning({ id: tasks.id });
+    if (!updated.length) throw new ApiError("not_found", "Úkol nenalezen.");
+
+    if (!assigneeIds) return;
+    await tx.delete(taskAssignees).where(eq(taskAssignees.taskId, taskId));
+    if (assigneeIds.length) {
+      await tx
+        .insert(taskAssignees)
+        .values(
+          [...new Set(assigneeIds)].map((userId) => ({ taskId, userId })),
+        );
+    }
+  });
 }
 
 /* ------------------------------------------------------------------ */

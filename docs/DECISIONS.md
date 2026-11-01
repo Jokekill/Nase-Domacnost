@@ -4,6 +4,20 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-029 — Rohlík: párování si pamatuje potravina, košík plní člověk (2026-11-01)
+
+**Co:** Tři úpravy zadané Vojtou 2026-11-01.
+- **Editace úkolu.** Úkol se na obrazovce Úkoly rozklikne za text (celý popisek je cíl, ne malá ikonka vedle — §11.2) a jde u něj změnit název, komu je zadán, období od–do, seznam a poznámka. Přiřazení se tu **nahrazuje**, ne přidává: zaškrtnutí lidí ve formuláři JE odpověď, kdežto hromadné přiřazování (§10.5) přidává — proto má `taskPatchSchema` nové `assigneeIds` a řádek i vazby se mění v jedné transakci, aby se do `change_log` nikdy nedostala polovina úpravy. Prázdný výběr je platná odpověď („nepřiřazeno"), ne žádná změna. Offline se editace nenabízí — není v push whitelistu (D-025).
+- **Recept do nákupního seznamu se ptá na porce.** Tlačítko „🛒 Do nákupu" na detailu receptu otevře dialog, který se zeptá na počet porcí (předplněný tím, co je právě na stepperu) a na cílový seznam, případně založí nový na tento týden. Používá **existující** import (`POST /api/shopping-lists/:id/import`), takže se množství slučuje podle D-019/D-020 místo zdvojování řádků. Stejná otázka přibyla do panelu „Naplnit" na nákupním seznamu: výběr receptu už neimportuje hned, nejdřív se ptá na porce.
+- **Rohlík.cz.** Rohlík nemá veřejné API, takže všechno, co jeho endpointy zná, je v jediném souboru `src/lib/rohlik/client.ts` za malou typovanou plochou — když Rohlík něco přesune, je to jediné místo k opravě. Ověřeno proti živému webu: **hledání produktů a čtení košíku**. Neověřeno (při psaní nebyl použit žádný účet): **přihlášení a přidání do košíku**; obojí posílá to, co posílá jejich web, a první skutečný běh to musí potvrdit.
+  - **Košík plní člověk, ne automat.** Položka v seznamu je „500 g mouky", řádek na Rohlíku je „1× Pernerka hladká 1 kg" — že jsou to totéž, může říct jen člověk. „🥕 Do Rohlíku" proto otevře kontrolní obrazovku s nabídkou produktů, počtem balení a ruční dohledávkou, a **nic nikdy neobjednává**: jen přidává do košíku, objednávku potvrzuje Vojta na rohlik.cz.
+  - **Počet balení se nehádá.** `packagesNeeded` staví na převodech z §6.1 (16 testů): velikost balení se čte z `textualAmount` včetně multipacků („2x250 g") a zaokrouhluje se **nahoru** — půl pytle mouky si koupit nejde. Co nejde převést (ingredience bez potraviny, „dle chuti", nerozluštitelné balení), přijde s prázdným počtem a větou, co chybí. „1 kus" není tichá náhrada.
+  - **Párování si pamatuje potravina** (`foods.rohlik_product_id` + jméno jako snapshot, migrace 0015): „která mouka" se řeší jednou a další košík už ji nabídne první. Zapíše se teprve ve chvíli, kdy položka opravdu šla do košíku.
+  - **Přihlašovací údaje jen v prostředí** (`ROHLIK_EMAIL`, `ROHLIK_PASSWORD`), nikdy v databázi a nikdy v exportu. Session žije jen po dobu jednoho požadavku.
+  - **První chyba běh zastaví** a vrátí, co už v košíku je („7 z 12"). Odmítnuté přidání znamená mrtvou session nebo změnu na jejich straně; projet zbytek seznamu by nepomohlo a bylo by neslušné.
+**Proč:** Zadání Vojty 2026-11-01.
+**Alternativy:** Přiřazení v editaci jako „přidat" (pak nejde nikoho odebrat); přepočet porcí až nad hotovým seznamem (přepočítával by i to, co tam přidal někdo jiný); vlastní tabulka párování Rohlíku místo sloupce na potravině (řešila by i položky bez potraviny, ale ty se stejně musí dohledat ručně); scraping webu Rohlíku headless prohlížečem (na Pi neúnosné a ještě křehčí než jejich JSON).
+
 ## D-028 — Kuchařka začíná kapitolami, pořadí a skrývání patří domácnosti (2026-10-28)
 
 **Co:** Kuchařka se otevírá na kapitolách (kategoriích), ne na hromadě receptů — jako tištěná kniha, kde nejdřív vybereš, kde hledat. Klik na kapitolu ukáže recepty z ní **včetně podkategorií**, podkapitoly jsou nahoře jako čipy na zúžení. Dvě dlaždice navíc: „Všechny recepty" (původní obrazovka se všemi filtry) a „Bez kategorie", která se objeví, jen když nějaké nezařazené recepty jsou.

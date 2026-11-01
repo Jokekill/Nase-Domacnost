@@ -1,9 +1,9 @@
 # STAV PROJEKTU
 
-**Poslední aktualizace:** 2026-10-28
+**Poslední aktualizace:** 2026-11-01
 **Aktuální fáze:** všechny fáze 0–11 hotové; aplikace běží na Raspberry Pi za Tailscale. Průběžné úpravy viz „Po nasazení" níže
 **Právě rozpracováno:** nic
-**Další krok:** nic povinného. Nedodělky jsou v „Známé problémy / TODO" a v „Co není naprogramované" níže; největší z nich je chybějící UI pro správu číselníků
+**Další krok:** ověřit Rohlík se skutečným účtem (přihlášení a plnění košíku je zatím neověřené — viz „Po nasazení"). Zbytek nedodělků je v „Známé problémy / TODO" a v „Co není naprogramované" níže
 
 **POZOR pro příští session:** nikdy nespouštět `pnpm build`, když běží dev server — přepíše mu `.next` a server pak vrací 500 (nutný restart dev serveru).
 
@@ -75,6 +75,10 @@ manifest i všechny tři ikony (192, 512, maskable) se načítají.
 
 ## Po nasazení
 
+- [x] **Editace úkolů** (2026-11-01, D-029) — úkol se na obrazovce Úkoly rozklikne za text a jde u něj změnit název, **komu je zadán** (zaškrtávací jména, prázdný výběr = nepřiřazeno), **období od–do**, seznam a **poznámka**; poznámka se pak ukazuje i v řádku. Mazání úkolu je ve stejném dialogu. `PATCH /api/tasks/:id` bere nově `assigneeIds[]`, které nahradí celou sadu přiřazených — řádek i vazby v jedné transakci. Offline se editace nenabízí (D-025)
+- [x] **Recept → nákupní seznam s dotazem na porce** (2026-11-01, D-029) — na detailu receptu tlačítko „🛒 Do nákupu": zeptá se na počet porcí (předplněný tím, co je na stepperu) a na cílový seznam, případně založí nový na tento týden. Jede přes existující import, takže se množství slučuje (D-019/D-020) místo zdvojování. Stejná otázka přibyla do panelu „Naplnit" na nákupním seznamu
+- [~] **Rohlík.cz — naplnění košíku z nákupního seznamu** (2026-11-01, D-029) — „🥕 Do Rohlíku" na nákupním seznamu spáruje neodškrtnuté položky s produkty Rohlíku, spočítá **počet balení** (zaokrouhluje nahoru, nikdy nehádá — 16 testů v `rohlik-packaging.test.ts`), nechá výběr přepsat nebo produkt dohledat ručně a pak položky přidá do košíku. Párování si pamatuje potravina (`foods.rohlik_product_id`, migrace 0015), takže „která mouka" se řeší jednou. Nikdy nic neobjednává — objednávku potvrdíš na rohlik.cz.
+  **Ověřeno proti živému webu:** hledání produktů a čtení košíku. **Neověřeno a musí projít Vojta s vlastním účtem:** přihlášení (`POST /services/frontend-service/login`) a přidání do košíku (`POST /services/frontend-service/v2/cart`) — Rohlík nemá veřejné API, tyhle dva endpointy posílají to, co posílá jejich web, a bez účtu je nešlo vyzkoušet. Údaje se nastavují jen v prostředí (`ROHLIK_EMAIL`, `ROHLIK_PASSWORD`); dokud nejsou, tlačítko „Přidat do košíku" je zakázané a párování i tak funguje
 - [x] **Kuchařka od kapitol** (2026-10-28, D-028) — úvod ukazuje kapitoly s počty a obálkami místo hromady receptů; klik vede na recepty kapitoly včetně podkategorií (ty jsou nahoře jako čipy). Přibyly dlaždice „Všechny recepty" a „Bez kategorie", hledání kapitoly přeskakuje. Nový režim **⚙︎ Kapitoly**: řazení šipkami, skrývání z úvodu, přejmenování, přidání, mazání i zařazení pod jinou kapitolu — pořadí a skrývání platí pro celou domácnost. Funguje i offline (zrcadlo nově nese u receptu `categoryIds`). Migrace 0014 přidala `categories.is_hidden`
 
 ## Co není naprogramované (stav 2026-10-28)
@@ -88,12 +92,14 @@ Checklist fází 0–11 je hotový. Tyhle věci vědomě chybí:
 - [ ] SMTP pro reset hesla — odkaz se loguje do konzole serveru (`docker compose logs app`)
 - [ ] zxing-js fallback skeneru čárových kódů pro iOS — tam je ruční zadání kódu
 - [ ] Mobilní bottom-sheet varianta filtrů kuchařky — panel je zatím responzivní
+- [ ] Rohlík: párování se pamatuje jen u položek, které mají potravinu — ručně dopsané („něco na gril") se dohledávají pokaždé. Taky se nikde nedá párování přehlédnout a smazat, mění se jen tím, že se v košíku vybere jiný produkt (D-029)
 - [ ] Offline filtry kuchařky podle kategorií, štítků a skupin potravin — vazební tabulky nejsou v zrcadle
 
 Záměrně se nedělá: více domácností (D-004), PDF s nutričními hodnotami (D-024), veřejné odkazy jsou hotové, jen vypnuté flagem.
 
 ## Rozhodnutí, která čekají na Vojtu
 
+- [ ] **Rohlík: první skutečný běh.** Doplnit `ROHLIK_EMAIL` a `ROHLIK_PASSWORD` do `.env` na Pi, restartovat `app` a projít seznam tlačítkem „🥕 Do Rohlíku". Co sledovat: (1) „Přidat do košíku" nekončí hláškou „Rohlík odmítl požadavek (HTTP 401)" — to by znamenalo, že přihlašovací endpoint chce něco víc (nejspíš CSRF token nebo hlavičku); (2) v košíku na rohlik.cz jsou opravdu ty produkty a počty, které obrazovka ukázala. Kdyby cokoli z toho selhalo, je k opravě jediný soubor — `src/lib/rohlik/client.ts`
 - [ ] Odsouhlasení Fází 3, 4, 5, 6, 7 a 8
 - [ ] **Ověřit service worker a instalaci na plochu v Chromu** — postup výše. Vojta 2026-08-14 rozhodl pokračovat dál s tím, že to zkontroluje dodatečně; do té doby to nikdo neviděl běžet (viz 10.2/10.7)
 - [ ] **Recepty k importu:** formát je hotový v docs/IMPORT-RECIPES.md včetně promptu pro AI — můžeš začít převádět PDF a nahrát je v Kuchařka → Import

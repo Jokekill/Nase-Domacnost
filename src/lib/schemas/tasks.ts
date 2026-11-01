@@ -46,6 +46,8 @@ export const taskPatchSchema = z.object({
   periodStart: isoDate.nullish(),
   periodEnd: isoDate.nullish(),
   dueAt: z.string().datetime({ offset: true }).nullish(),
+  /** The whole assignee set, replacing what is there; `[]` unassigns. */
+  assigneeIds: z.array(uuid).max(20).optional(),
 });
 
 export const assignSchema = z.object({
