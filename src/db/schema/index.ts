@@ -6,3 +6,4 @@ export * from "./shopping";
 export * from "./diary";
 export * from "./sharing";
 export * from "./sync";
+export * from "./integrations";

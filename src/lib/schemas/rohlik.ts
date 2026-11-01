@@ -4,6 +4,11 @@ const uuid = z.string().uuid();
 
 export const rohlikMatchSchema = z.object({ listId: uuid });
 
+export const rohlikCredentialsSchema = z.object({
+  login: z.string().trim().email("Zadej e-mail, kterým se hlásíš k Rohlíku."),
+  password: z.string().min(1, "Heslo nesmí být prázdné.").max(200),
+});
+
 export const rohlikSearchSchema = z.object({
   q: z.string().trim().min(2).max(100),
 });

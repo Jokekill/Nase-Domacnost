@@ -38,10 +38,8 @@ export type RohlikProduct = {
   url: string;
 };
 
-/** True when the installation has credentials to push a basket with. */
-export function rohlikConfigured(): boolean {
-  return Boolean(process.env.ROHLIK_EMAIL && process.env.ROHLIK_PASSWORD);
-}
+/** What signing in needs. Where it comes from is `./credentials`' business. */
+export type RohlikLogin = { login: string; password: string };
 
 /* ------------------------------------------------------------------ */
 /* Cookies                                                            */
@@ -210,16 +208,18 @@ export class RohlikSession {
   private constructor(private readonly jar: CookieJar) {}
 
   /**
-   * Signs in with the credentials from the environment. They are never stored
-   * in the database and never leave the server.
+   * Signs in. The caller says with what — this module never reaches for the
+   * environment or the database, so there is exactly one place (./credentials)
+   * that decides whose account is being used.
    */
-  static async login(): Promise<RohlikSession> {
-    const email = process.env.ROHLIK_EMAIL;
-    const password = process.env.ROHLIK_PASSWORD;
-    if (!email || !password) {
+  static async login({
+    login,
+    password,
+  }: RohlikLogin): Promise<RohlikSession> {
+    if (!login || !password) {
       throw new ApiError(
         "validation_error",
-        "Rohlík není nastavený — chybí ROHLIK_EMAIL a ROHLIK_PASSWORD.",
+        "Rohlík není připojený — vyplň e-mail a heslo v Nastavení.",
       );
     }
     const jar = new CookieJar();
@@ -230,7 +230,7 @@ export class RohlikSession {
     );
     await request<unknown>(`${SERVICE}/login`, {
       method: "POST",
-      body: JSON.stringify({ email, password, name: "" }),
+      body: JSON.stringify({ email: login, password, name: "" }),
       jar,
     });
     return new RohlikSession(jar);

@@ -180,18 +180,25 @@ a `copiedFrom`, aby UI nenabízelo, co API stejně odmítne.
 | GET  | `/api/sync/pull?cursor=&limit=` | změny z change_log od kurzoru |
 | POST | `/api/sync/push` | dávka operací z outboxu (idempotentní dle opId) |
 
-## Rohlík.cz (D-029)
+## Rohlík.cz (D-029, D-030)
 
 | Metoda | Cesta | Popis |
 |---|---|---|
+| GET | `/api/rohlik/credentials` | stav připojení: `source` (`settings`/`env`/`none`), e-mail, kdy se naposled povedlo přihlásit, poslední chyba — **nikdy heslo** |
+| PUT | `/api/rohlik/credentials` | `{login, password}` — nejdřív se přihlásí k Rohlíku, uloží jen při úspěchu (správce) |
+| DELETE | `/api/rohlik/credentials` | odpojení; řádek se maže, ne označuje (správce) |
+| POST | `/api/rohlik/credentials/verify` | přihlásí se uloženými údaji a zapíše výsledek (správce) |
 | POST | `/api/rohlik/match` | `{listId}` → neodškrtnuté položky seznamu s nabídkou produktů a počtem balení; nic neukládá |
 | GET  | `/api/rohlik/search?q=` | ruční dohledání produktu (min. 2 znaky) |
 | POST | `/api/rohlik/cart` | `{lines: [{productId, quantity, foodId?, productName?}]}` → přidá do košíku a uloží párování |
 
-Košík se jen **plní**, nikdy nemaže a nikdy neobjednává. Bez `ROHLIK_EMAIL`
-a `ROHLIK_PASSWORD` vrací `/api/rohlik/cart` chybu 400 a UI tlačítko zakáže;
-`match` a `search` fungují i tak (Rohlík je nabízí anonymně).
-`GET /api/auth/me` proto vrací `features.rohlik`.
+Košík se jen **plní**, nikdy nemaže a nikdy neobjednává. Dokud není Rohlík
+připojený (Nastavení, nebo záložní `ROHLIK_EMAIL` / `ROHLIK_PASSWORD`), vrací
+`/api/rohlik/cart` chybu 400 a UI tlačítko zakáže; `match` a `search` fungují
+i tak (Rohlík je nabízí anonymně). `GET /api/auth/me` proto vrací
+`features.rohlik`. Heslo je zašifrované v `integration_credentials` a žádný
+endpoint ho nevrací (D-030); přihlašovací pokusy mají vlastní limit
+8 / 10 minut na domácnost.
 
 ## Ostatní
 

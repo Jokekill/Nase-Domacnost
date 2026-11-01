@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { BackupSection } from "@/components/settings/backup-section";
+import { RohlikSection } from "@/components/settings/rohlik-section";
 import { TransferSection } from "@/components/settings/transfer-section";
 import { apiFetch } from "@/lib/api/client";
 
@@ -191,6 +192,8 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+      <RohlikSection isAdmin={me?.role === "admin"} />
 
       <BackupSection isAdmin={me?.role === "admin"} />
 

@@ -8,6 +8,9 @@ import * as schema from "@/db/schema";
  *
  * Deliberately NOT exported (technical, per-installation state):
  *   sessions, password_reset_tokens, household_invites — credentials/tokens,
+ *   integration_credentials — the household's password to somebody else's
+ *     service; it has no business travelling in a file people pass around
+ *     (D-030), and the key to decrypt it is not in the export either,
  *   change_log, off_cache — caches and sync cursors, meaningless elsewhere,
  *   backup_runs — history of this machine's backups.
  */

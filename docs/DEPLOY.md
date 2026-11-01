@@ -52,7 +52,8 @@ V `.env` nastav:
 | `POSTGRES_PASSWORD` | něco dlouhého a náhodného, **ne** výchozí |
 | `DEV_INSECURE_COOKIES` | `false` (HTTPS zajišťuje Tailscale) |
 | `PUBLIC_SHARING_ENABLED` | `false`, dokud veřejné odkazy nechceš |
-| `ROHLIK_EMAIL`, `ROHLIK_PASSWORD` | účet na rohlik.cz; bez nich jde seznam jen spárovat, košík se nenaplní (D-029) |
+| `ROHLIK_EMAIL`, `ROHLIK_PASSWORD` | **nechat prázdné** — Rohlík se připojuje v aplikaci (Nastavení → Rohlík.cz). Zůstávají jako záloha pro starší instalace (D-030) |
+| `APP_SECRET_KEY` | volitelné; prázdné = aplikace si klíč vygeneruje do volume `app_secrets`. Ten volume **není v zálohách** — po obnově na jiný stroj se heslo k Rohlíku zadá znovu (D-030) |
 | `UPLOADS_HOST_DIR` | `/srv/domacnost/uploads` |
 | `BACKUPS_HOST_DIR` | `/srv/domacnost/backups` |
 | `BACKUP_HOUR` | `03` |

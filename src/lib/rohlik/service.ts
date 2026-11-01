@@ -16,6 +16,7 @@ import {
   type CartSummary,
   type RohlikProduct,
 } from "./client";
+import { getRohlikCredentials, recordOutcome } from "./credentials";
 
 type Actor = { userId: string; householdId: string };
 
@@ -243,7 +244,28 @@ export async function pushToCart(
     throw new ApiError("validation_error", "Není co přidat do košíku.");
   }
 
-  const session = await RohlikSession.login();
+  const credentials = await getRohlikCredentials(actor.householdId);
+  if (!credentials) {
+    throw new ApiError(
+      "validation_error",
+      "Rohlík není připojený — přihlas se k němu v Nastavení.",
+    );
+  }
+
+  let session: RohlikSession;
+  try {
+    session = await RohlikSession.login(credentials);
+  } catch (err) {
+    // A dead password shows up here first; Nastavení then says so without
+    // anyone having to come back and press "Ověřit".
+    await recordOutcome(
+      actor.householdId,
+      err instanceof Error ? err.message : "Přihlášení selhalo.",
+    ).catch(() => {});
+    throw err;
+  }
+  await recordOutcome(actor.householdId, null).catch(() => {});
+
   const added: { productId: number; quantity: number }[] = [];
   let error: string | null = null;
 

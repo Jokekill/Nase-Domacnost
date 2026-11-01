@@ -51,8 +51,11 @@ COPY --from=build --chown=domacnost:domacnost /app/src/db/migrations ./migration
 COPY --from=build --chown=domacnost:domacnost /app/migrate.bundle.mjs ./scripts/migrate.mjs
 
 # Photos live on a volume; the directory must belong to the app user.
-RUN mkdir -p /data/uploads && chown -R domacnost:domacnost /data
-ENV UPLOADS_DIR=/data/uploads
+# /data/secrets gets its own volume and is deliberately NOT under uploads —
+# the backup sidecar tars uploads next to the database dump, and a key stored
+# in the same archive as the ciphertext protects nothing (D-030).
+RUN mkdir -p /data/uploads /data/secrets && chown -R domacnost:domacnost /data
+ENV UPLOADS_DIR=/data/uploads SECRETS_DIR=/data/secrets
 
 USER domacnost
 EXPOSE 3000

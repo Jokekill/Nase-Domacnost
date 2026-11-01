@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, apiHandler } from "@/lib/api/errors";
+import { apiHandler } from "@/lib/api/errors";
 import { requireHousehold } from "@/lib/auth/guards";
-import { rohlikConfigured } from "@/lib/rohlik/client";
 import { rohlikCartSchema } from "@/lib/schemas/rohlik";
 import { pushToCart } from "@/lib/rohlik/service";
 
@@ -13,12 +12,6 @@ import { pushToCart } from "@/lib/rohlik/service";
  */
 export const POST = apiHandler(async (req: NextRequest) => {
   const ctx = await requireHousehold();
-  if (!rohlikConfigured()) {
-    throw new ApiError(
-      "validation_error",
-      "Rohlík není v této instalaci nastavený (ROHLIK_EMAIL, ROHLIK_PASSWORD).",
-    );
-  }
   const { lines } = rohlikCartSchema.parse(await req.json());
   const result = await pushToCart(
     { userId: ctx.user.id, householdId: ctx.householdId },

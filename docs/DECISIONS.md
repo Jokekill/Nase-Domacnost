@@ -4,6 +4,19 @@ Každé rozhodnutí: co, proč, jaké byly alternativy. Nejnovější nahoře.
 
 ---
 
+## D-030 — Rohlík se připojuje v Nastavení, heslo leží zašifrované mimo zálohy (2026-11-01)
+
+**Co:** Přihlášení k Rohlíku se zadává v aplikaci (Nastavení → 🥕 Rohlík.cz), ne v proměnných prostředí.
+- **Formulář se nejdřív přihlásí, teprve pak uloží.** Heslo, které Rohlík odmítne, se nikdy nezapíše — takže neexistuje stav „uloženo, ale nefunguje“ a překlep nemůže přepsat fungující heslo. Odpověď na obrazovce je skutečná odpověď Rohlíku, ne naše domněnka.
+- **Heslo je zašifrované (AES-256-GCM).** Naše vlastní hesla se hashují argon2 a nikdy nedešifrují; tohle je ten druhý případ — cizí přihlašovací údaj, který musíme umět podat doslova. Šifrování na tom nic nemění, ale drží plain text mimo `pg_dump`, a noční záloha je ta kopie, co nejspíš skončí jinde.
+- **Klíč nebydlí tam, kde data.** `APP_SECRET_KEY` z prostředí, jinak soubor, který si aplikace při prvním použití vygeneruje do `SECRETS_DIR` — v Dockeru vlastní volume `app_secrets`, **ne** pod `uploads`. Zálohovací sidecar balí uploads vedle dumpu databáze, takže klíč uvnitř stejného archivu by nechránil nic. Daň: obnova zálohy na jiném stroji heslo k Rohlíku nepřinese, zadá se znovu v Nastavení. U uloženého cizího hesla je to správná výměna.
+- **Tabulka `integration_credentials` je technická:** bez soft delete, mimo synchronizaci na telefony, mimo export. „Odpojit“ řádek opravdu maže — údaj, který je jen označený jako smazaný, pořád sedí v záloze.
+- **Heslo je write-only.** Nevrací ho žádný endpoint, ani správci. `GET /api/rohlik/credentials` dává e-mail, kdy se naposled povedlo přihlásit a případnou poslední chybu; to obrazovce stačí. Zápis a mazání smí jen správce, stav si přečte každý člen — proč je tlačítko u seznamu zhasnuté, není tajemství.
+- **Chyba se pamatuje.** Když přihlášení selže při plnění košíku, zapíše se do `last_error`, takže Nastavení řekne proč, i když se u toho nikdo nedíval.
+- **Proměnné `ROHLIK_EMAIL` / `ROHLIK_PASSWORD` zůstávají jako záloha** — instalace, co je už měla (D-029), fungují dál beze změny. Uložené v Nastavení má přednost.
+**Proč:** Zadání Vojty 2026-11-01: integrace se má dát spustit z Nastavení, ne editací `.env` na Pi. Ověřeno: šifrovaný sloupec neobsahuje plain text, round-trip i s diakritikou sedí, stav heslo nevrací, `PUT`/`DELETE` od člena skončí 403 (člen stav vidí), odpojení smaže řádek a 7 testů nad šifrováním (jiný klíč, pozměněný blok a cizí formát selžou hlasitě).
+**Alternativy:** Heslo v DB v plain textu (jednodušší, ale cokoli, co přečte zálohu, má účet); klíč v `uploads` (putoval by v jednom archivu s ciphertextem); ukládat jen session cookie místo hesla (bezpečnější, ale po expiraci by se Vojta musel hlásit znovu, a jak dlouho session Rohlíku žije, nevíme); `APP_SECRET_KEY` povinně (jedna věc navíc k nastavení, přitom vygenerovaný klíč v volume dělá totéž).
+
 ## D-029 — Rohlík: párování si pamatuje potravina, košík plní člověk (2026-11-01)
 
 **Co:** Tři úpravy zadané Vojtou 2026-11-01.
