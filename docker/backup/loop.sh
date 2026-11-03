@@ -11,10 +11,22 @@ set -uo pipefail
 
 BACKUP_ROOT="${BACKUP_ROOT:-/data/backups}"
 BACKUP_HOUR="${BACKUP_HOUR:-03}"
+# The app container runs as this uid/gid (see Dockerfile).
+APP_UID="${APP_UID:-1001}"
+APP_GID="${APP_GID:-999}"
 TRIGGER="$BACKUP_ROOT/.trigger"
 STATE="$BACKUP_ROOT/.state"
 
 mkdir -p "$BACKUP_ROOT" "$STATE"
+
+# This sidecar runs as root, the app as uid 1001, and the app has to be able
+# to drop $TRIGGER here — a root-owned backup root makes "Zálohovat teď"
+# fail with EACCES. Only the root directory is handed over: the dumps inside
+# daily/weekly/monthly stay root-owned, so a compromised app cannot delete
+# them, it only reads their size (docs/DEPLOY.md §6).
+if ! chown "$APP_UID:$APP_GID" "$BACKUP_ROOT" 2>/dev/null; then
+  echo "[backup] nelze změnit vlastníka $BACKUP_ROOT — ruční záloha z aplikace nepoběží" >&2
+fi
 
 echo "[backup] sidecar běží; denní záloha v ${BACKUP_HOUR}:00, ruční spuštění přes $TRIGGER"
 

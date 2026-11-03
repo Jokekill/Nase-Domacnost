@@ -112,15 +112,21 @@ který za tebe nikdo neudělá.
 
 `${BACKUPS_HOST_DIR}` je připojená do obou kontejnerů: sidecar tam píše
 zálohy jako root, aplikace si tam jen odkládá značku pro ruční spuštění
-a počítá velikost. V aplikaci běží uid 1001, takže složka mu musí patřit
-— rootovi práva nevadí:
+a počítá velikost. Protože aplikace běží jako uid 1001, musí jí ta složka
+patřit — sidecar si to srovná sám při startu (`chown` v `loop.sh`), takže
+ručně není potřeba nic dělat. Vlastník se mění **jen u té vrchní složky**;
+samotné zálohy v `daily/`, `weekly/` a `monthly/` zůstávají rootovy, aby
+je aplikace nemohla smazat — jen si čte jejich velikost.
+
+Kdyby to přesto nesedělo (složka na NFS, zálohy ze starší instalace),
+stejnou věc udělá ručně:
 
 ```bash
-sudo mkdir -p /srv/domacnost/backups
-sudo chown 1001:1001 /srv/domacnost/backups
+sudo docker compose exec backup chown 1001:999 /data/backups
 ```
 
-Bez toho skončí „Zálohovat teď“ interní chybou serveru.
+Dokud složka aplikaci nepatří, končí „Zálohovat teď“ interní chybou
+serveru a v `docker compose logs app` je `EACCES ... /data/backups/.trigger`.
 
 ## 7. Obnova ze zálohy na čistou instalaci
 
@@ -160,4 +166,4 @@ obnovu ze zálohy, pokud migrace měnila data.
 | PWA se nenabízí k instalaci | jde to přes `https://…ts.net`? V DevTools → Application → Service Workers musí být stav `activated` |
 | offline nic neukazuje | zrcadlo se plní až po prvním přihlášení online; Nastavení → Synchronizace ukáže frontu i poslední sync |
 | záloha stará | Nastavení → Zálohy zvýrazní starší než 48 h; `docker compose logs backup` |
-| „Zálohovat teď“ hlásí interní chybu | práva na `${BACKUPS_HOST_DIR}` (v kontejneru běží uid 1001) — viz §6; detail výjimky je v `docker compose logs app` |
+| „Zálohovat teď“ hlásí interní chybu | v logu app bude `EACCES … /data/backups/.trigger`: složka nepatří uid 1001 — `docker compose restart backup` ji srovná, viz §6 |
