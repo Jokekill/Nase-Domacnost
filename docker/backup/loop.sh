@@ -16,6 +16,12 @@ APP_UID="${APP_UID:-1001}"
 APP_GID="${APP_GID:-999}"
 TRIGGER="$BACKUP_ROOT/.trigger"
 STATE="$BACKUP_ROOT/.state"
+# Called through bash on purpose, never executed directly: both scripts are
+# bind-mounted from the checkout, so they carry the host file mode. The repo
+# is developed on Windows, where git cannot record the executable bit
+# (core.filemode=false), and a 644 script makes every backup fail with
+# "Permission denied". The entrypoint invokes this file the same way.
+BACKUP_SCRIPT="${BACKUP_SCRIPT:-/usr/local/bin/backup.sh}"
 
 mkdir -p "$BACKUP_ROOT" "$STATE"
 
@@ -54,13 +60,13 @@ while true; do
 
   if [ -f "$TRIGGER" ]; then
     rm -f "$TRIGGER"
-    /usr/local/bin/backup.sh manual
+    bash "$BACKUP_SCRIPT" manual
   fi
 
   if [ "$HOUR" = "$BACKUP_HOUR" ] && [ ! -f "$STATE/last-auto-$TODAY" ]; then
     rm -f "$STATE"/last-auto-* 2>/dev/null
     touch "$STATE/last-auto-$TODAY"
-    /usr/local/bin/backup.sh auto
+    bash "$BACKUP_SCRIPT" auto
     maintenance
   fi
 
