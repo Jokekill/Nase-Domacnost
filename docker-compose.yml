@@ -68,6 +68,11 @@ services:
     environment:
       DATABASE_URL: postgres://domacnost:${POSTGRES_PASSWORD:-domacnost_dev}@db:5432/domacnost
       UPLOADS_DIR: /data/uploads
+      # The app never dumps anything itself: it drops the manual-backup
+      # trigger into this directory and reads its size for the Settings
+      # screen (§4.2). Unset it falls back to ./data/backups inside the
+      # container, where the trigger never reaches the sidecar.
+      BACKUPS_DIR: /data/backups
       PUBLIC_SHARING_ENABLED: ${PUBLIC_SHARING_ENABLED:-false}
       # Rohlík is connected in Nastavení (D-030); these two stay as a
       # fallback for installations that already set them.
@@ -85,6 +90,11 @@ services:
     volumes:
       # Same host directory the backup sidecar reads (read-only) — see above.
       - ${UPLOADS_HOST_DIR:-./data/uploads}:/data/uploads
+      # The sidecar's directory, shared: read for the total size shown in
+      # Nastavení, written only to drop .trigger. The sidecar runs as root, the
+      # app as uid 1001, so the host directory must belong to 1001 — see
+      # docs/DEPLOY.md §6.
+      - ${BACKUPS_HOST_DIR:-./data/backups}:/data/backups
       # Its own volume on purpose: the key must not end up in the nightly
       # archive together with the data it decrypts (D-030). The flip side is
       # that restoring a backup elsewhere does not carry the Rohlík password —

@@ -110,6 +110,18 @@ vidět v Nastavení → Zálohy, ruční spuštění tamtéž. Zálohy leží na
 obyčejné soubory — zkopírovat je jinam (druhý disk, NAS) je poslední krok,
 který za tebe nikdo neudělá.
 
+`${BACKUPS_HOST_DIR}` je připojená do obou kontejnerů: sidecar tam píše
+zálohy jako root, aplikace si tam jen odkládá značku pro ruční spuštění
+a počítá velikost. V aplikaci běží uid 1001, takže složka mu musí patřit
+— rootovi práva nevadí:
+
+```bash
+sudo mkdir -p /srv/domacnost/backups
+sudo chown 1001:1001 /srv/domacnost/backups
+```
+
+Bez toho skončí „Zálohovat teď“ interní chybou serveru.
+
 ## 7. Obnova ze zálohy na čistou instalaci
 
 ```bash
@@ -148,3 +160,4 @@ obnovu ze zálohy, pokud migrace měnila data.
 | PWA se nenabízí k instalaci | jde to přes `https://…ts.net`? V DevTools → Application → Service Workers musí být stav `activated` |
 | offline nic neukazuje | zrcadlo se plní až po prvním přihlášení online; Nastavení → Synchronizace ukáže frontu i poslední sync |
 | záloha stará | Nastavení → Zálohy zvýrazní starší než 48 h; `docker compose logs backup` |
+| „Zálohovat teď“ hlásí interní chybu | práva na `${BACKUPS_HOST_DIR}` (v kontejneru běží uid 1001) — viz §6; detail výjimky je v `docker compose logs app` |

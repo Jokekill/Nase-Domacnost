@@ -54,8 +54,12 @@ COPY --from=build --chown=domacnost:domacnost /app/migrate.bundle.mjs ./scripts/
 # /data/secrets gets its own volume and is deliberately NOT under uploads —
 # the backup sidecar tars uploads next to the database dump, and a key stored
 # in the same archive as the ciphertext protects nothing (D-030).
-RUN mkdir -p /data/uploads /data/secrets && chown -R domacnost:domacnost /data
-ENV UPLOADS_DIR=/data/uploads SECRETS_DIR=/data/secrets
+# /data/backups is the sidecar's directory, bind-mounted in compose: the app
+# only drops the manual-backup trigger there and reads the total size.
+RUN mkdir -p /data/uploads /data/secrets /data/backups \
+  && chown -R domacnost:domacnost /data
+ENV UPLOADS_DIR=/data/uploads SECRETS_DIR=/data/secrets \
+    BACKUPS_DIR=/data/backups
 
 USER domacnost
 EXPOSE 3000
